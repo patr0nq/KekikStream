@@ -14,15 +14,12 @@ class VidStack(ExtractorBase):
         "vidstack.io", "server1.uns.bio", "upns.one"
     ]
 
-    def can_handle_url(self, url: str) -> bool:
-        return any(domain in url for domain in self.supported_domains)
-
     def decrypt_aes(self, input_hex: str, key: str, iv: str) -> str:
         try:
-            cipher = AES.new(key.encode('utf-8'), AES.MODE_CBC, iv.encode('utf-8'))
-            raw_data = bytes.fromhex(input_hex)
+            cipher    = AES.new(key.encode('utf-8'), AES.MODE_CBC, iv.encode('utf-8'))
+            raw_data  = bytes.fromhex(input_hex)
             decrypted = cipher.decrypt(raw_data)
-            unpadded = Padding.unpad(decrypted, AES.block_size)
+            unpadded  = Padding.unpad(decrypted, AES.block_size)
             return unpadded.decode('utf-8')
         except Exception as e:
             # print(f"DEBUG VidStack: {iv} -> {e}") # Debugging

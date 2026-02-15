@@ -49,10 +49,8 @@ class Sinefy(PluginBase):
         for item in secici.select("div.poster-with-subject, div.dark-segment div.poster-md.poster"):
             title  = secici.select_text("h2", item)
             href   = secici.select_attr("a", "href", item)
-            poster = secici.select_attr("img", "data-srcset", item)
-
-            if poster:
-                poster = poster.split(",")[0].split(" ")[0]
+            poster_attr = secici.select_attr("img", "data-srcset", item)
+            poster = poster_attr.split(",")[0].split(" ")[0] if poster_attr else None
 
             if title and href:
                 results.append(MainPageResult(
@@ -144,11 +142,10 @@ class Sinefy(PluginBase):
         description = secici.select_text("p#tv-series-desc")
         tags        = secici.select_texts("div.item.categories a")
         rating      = secici.select_text("span.color-imdb")
-        actors      = secici.select_texts("div.content h5")
-        year        = secici.extract_year("div.truncate")
-        duration    = secici.regex_first(r"(\d+)", secici.select_text(".media-meta td:last-child"))
-        if duration == year or int(duration) < 40:
-            duration = None
+        actors   = secici.select_texts("div.content h5")
+        year     = secici.extract_year("div.truncate")
+        duration = secici.regex_first(r"(\d+)", secici.select_text(".media-meta td:last-child"))
+        duration = None if (duration == year or (duration and int(duration) < 40)) else duration
 
         common_info = {
             "url"         : url,

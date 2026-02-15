@@ -1,0 +1,44 @@
+# Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
+
+from KekikStream.Core import ExtractorBase, ExtractResult, HTMLHelper
+
+class Uqload(ExtractorBase):
+    name     = "Uqload"
+    main_url = "https://uqload.cx"
+
+    supported_domains = ["uqload.com", "uqload.io", "uqload.cx", "uqload.to", "uqload.co"]
+
+    async def extract(self, url: str, referer: str = None) -> ExtractResult:
+        domain  = self.get_base_url(url)
+        headers = {
+            "Referer"    : referer or domain,
+            "User-Agent" : "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+        }
+
+        try:
+            resp    = await self.httpx.get(url, headers=headers)
+            content = resp.text
+        except:
+            resp    = self.cloudscraper.get(url, headers=headers)
+            content = resp.text
+
+        secici = HTMLHelper(content)
+
+        # Method 1: script | file: "..."
+        video_url = secici.regex_first(r'file\s*:\s*["\']([^"\']+)["\']')
+
+        if not video_url:
+            # Method 2: sources: ["..."]
+            video_url = secici.regex_first(r'sources\s*:\s*\[\s*["\']([^"\']+)["\']')
+
+        if not video_url:
+             video_url = secici.regex_first(r'src\s*:\s*["\']([^"\']+)["\']')
+
+        if not video_url:
+            raise ValueError(f"Uqload: Video URL bulunamadı. {url}")
+
+        return ExtractResult(
+            name    = self.name,
+            url     = video_url,
+            referer = domain
+        )

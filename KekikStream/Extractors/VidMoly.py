@@ -11,9 +11,6 @@ class VidMoly(ExtractorBase):
     # Birden fazla domain destekle
     supported_domains = ["vidmoly.to", "vidmoly.me", "vidmoly.net", "vidmoly.biz"]
 
-    def can_handle_url(self, url: str) -> bool:
-        return any(domain in url for domain in self.supported_domains)
-
     async def extract(self, url: str, referer: str = None) -> ExtractResult:
         if referer:
             self.httpx.headers.update({"Referer": referer})

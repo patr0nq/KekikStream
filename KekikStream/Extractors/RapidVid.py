@@ -11,9 +11,6 @@ class RapidVid(ExtractorBase):
     # Birden fazla domain destekle
     supported_domains = ["rapidvid.net", "rapid.filmmakinesi.to"]
 
-    def can_handle_url(self, url: str) -> bool:
-        return any(domain in url for domain in self.supported_domains)
-
     async def extract(self, url: str, referer: str = None) -> ExtractResult:
         if referer:
             self.httpx.headers.update({"Referer": referer})

@@ -9,9 +9,6 @@ class Veev(ExtractorBase):
 
     supported_domains = ["veev.to", "kinoger.to", "poophq.com", "doods.pro", "dood.so", "dood.li", "dood.wf", "dood.cx", "dood.sh", "dood.watch", "dood.pm", "dood.to", "dood.ws"]
 
-    def can_handle_url(self, url: str) -> bool:
-        return any(domain in url for domain in self.supported_domains)
-
     def veev_decode(self, encoded: str) -> str:
         if not encoded:
             return ""

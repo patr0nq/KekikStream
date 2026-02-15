@@ -12,9 +12,6 @@ class MolyStream(ExtractorBase):
         "yd.sheila.stream", "ydf.popcornvakti.net",
     ]
 
-    def can_handle_url(self, url: str) -> bool:
-        return any(domain in url for domain in self.supported_domains)
-
     async def extract(self, url: str, referer: str = None) -> ExtractResult:
         self.httpx.headers.update({"Referer": referer or self.main_url})
 

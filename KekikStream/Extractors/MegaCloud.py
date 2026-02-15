@@ -14,9 +14,6 @@ class MegaCloud(ExtractorBase):
         "streameeeeee.site",
     ]
 
-    def can_handle_url(self, url: str) -> bool:
-        return any(domain in url for domain in self.supported_domains)
-
     async def extract(self, url: str, referer: str = None) -> ExtractResult:
         v_id    = url.split("?")[0].split("/")[-1]
         headers = {"Referer": self.get_base_url(url), "X-Requested-With": "XMLHttpRequest"}

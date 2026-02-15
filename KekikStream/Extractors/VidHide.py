@@ -21,9 +21,6 @@ class VidHide(ExtractorBase):
         "peytonepre.com",
     ]
 
-    def can_handle_url(self, url: str) -> bool:
-        return any(domain in url for domain in self.supported_domains)
-
     def get_embed_url(self, url: str) -> str:
         if "/d/" in url:
             return url.replace("/d/", "/v/")

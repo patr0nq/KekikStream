@@ -1,7 +1,6 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
 from KekikStream.Core import ExtractorBase, ExtractResult, HTMLHelper
-import json
 
 class TRsTX(ExtractorBase):
     name     = "TRsTX"

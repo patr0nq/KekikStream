@@ -18,9 +18,6 @@ class StreamWish(ExtractorBase):
         "streamhls.to", "hlswish.com"
     ]
 
-    def can_handle_url(self, url: str) -> bool:
-        return any(domain in url for domain in self.supported_domains)
-
     def resolve_embed_url(self, url: str) -> str:
         # Kotlin: /f/ -> /, /e/ -> /
         if "/f/" in url:
@@ -55,11 +52,11 @@ class StreamWish(ExtractorBase):
         sel = HTMLHelper(content)
 
         # Regex: file:\s*"(.*?m3u8.*?)"
-        m3u8_url = sel.regex_first(r'file:\s*["\']([^"\']+\.m3u8[^"\']*)["\']')
+        m3u8_url = sel.regex_first(r'file\s*:\s*["\']([^"\']+\.m3u8[^"\']*)["\']')
 
         if not m3u8_url:
             # Fallback to sources: Kotlin mantığı
-            m3u8_url = sel.regex_first(r'sources:\s*\[\s*{\s*file:\s*["\']([^"\']+)["\']')
+            m3u8_url = sel.regex_first(r'sources\s*:\s*\[\s*{\s*file\s*:\s*["\']([^"\']+)["\']')
 
         if not m3u8_url:
             # p,a,c,k,e,d içinde olabilir

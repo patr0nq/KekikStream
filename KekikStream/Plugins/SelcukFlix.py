@@ -114,10 +114,7 @@ class SelcukFlix(PluginBase):
             for item in data.get("result", []):
                 title  = item.get("title")
                 slug   = item.get("slug")
-                poster = item.get("poster")
-
-                if poster:
-                    poster = self.clean_image_url(poster)
+                poster = self.clean_image_url(item.get("poster")) if item.get("poster") else None
 
                 if slug:
                     results.append(MainPageResult(
@@ -164,10 +161,7 @@ class SelcukFlix(PluginBase):
                 # API field isimleri: object_name, used_slug, object_poster_url
                 title  = item.get("object_name") or item.get("title")
                 slug   = item.get("used_slug") or item.get("slug")
-                poster = item.get("object_poster_url") or item.get("poster")
-
-                if poster:
-                    poster = self.clean_image_url(poster)
+                poster = self.clean_image_url(item.get("object_poster_url") or item.get("poster")) if (item.get("object_poster_url") or item.get("poster")) else None
 
                 if slug and "/seri-filmler/" not in slug:
                     results.append(SearchResult(
@@ -254,9 +248,6 @@ class SelcukFlix(PluginBase):
                 return SeriesInfo(**common_info, episodes=episodes)
 
             return MovieInfo(**common_info)
-
-        except Exception:
-            return SeriesInfo(url=url, title=self.clean_title(sel.select_text("h1")) or "Bilinmeyen")
 
         except Exception:
             return SeriesInfo(url=url, title=self.clean_title(sel.select_text("h1")) or "Bilinmeyen")
