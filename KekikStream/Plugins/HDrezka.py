@@ -254,7 +254,7 @@ class HDrezka(PluginBase):
                             payload["episode"] = res["episode"]
 
                         api_url = f"{self.main_url}/ajax/get_cdn_series/"
-                        istek_api = await self.httpx.post(api_url, data=payload, headers={"Referer": res["ref"]})
+                        istek_api = await self.httpx.post(api_url, data=payload, headers={"Referer": res["ref"], "X-Requested-With": "XMLHttpRequest"})
                         try:
                             api_data = istek_api.json()
                             if api_data.get("url"):
@@ -270,7 +270,7 @@ class HDrezka(PluginBase):
                                     f_s_id = first_ep_li.attrs.get("data-season_id") or res.get("season") or "1"
                                     # Recursive-ish call for the first episode
                                     payload.update({"action": "get_stream", "season": f_s_id, "episode": f_ep_id})
-                                    istek_f = await self.httpx.post(api_url, data=payload, headers={"Referer": res["ref"]})
+                                    istek_f = await self.httpx.post(api_url, data=payload, headers={"Referer": res["ref"], "X-Requested-With": "XMLHttpRequest"})
                                     f_data = istek_f.json()
                                     if f_data.get("url"):
                                         results.extend(self._invoke_sources("Default", f_data["url"]))
@@ -301,7 +301,7 @@ class HDrezka(PluginBase):
 
                 timestamp = int(time.time() * 1000)
                 api_url = f"{self.main_url}/ajax/get_cdn_series/?t={timestamp}"
-                istek   = await self.httpx.post(api_url, data=payload, headers={"Referer": res["ref"]})
+                istek   = await self.httpx.post(api_url, data=payload, headers={"Referer": res["ref"], "X-Requested-With": "XMLHttpRequest"})
 
                 try:
                     data = istek.json()

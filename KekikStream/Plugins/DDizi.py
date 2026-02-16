@@ -72,7 +72,10 @@ class DDizi(PluginBase):
         # Meta verileri (DDizi'de pek yok ama deniyoruz)
         # Year için sadece açıklama kısmına bakalım ki URL'deki ID'yi almasın
         year   = HTMLHelper(description).regex_first(r"(\d{4})") if description else None
-        actors = secici.select_texts("div.oyuncular a, ul.bilgi li a")
+
+        # Etiket ve Oyuncu iyileştirmesi
+        tags   = secici.select_texts("div.tag-cloud a") or secici.select_texts("p.etiket a") or secici.select_texts("div.etiketler a")
+        actors = secici.select_texts("div.oyuncular a") or secici.select_attrs("div.oyuncular img", "alt") or secici.select_texts("ul.bilgi li a")
 
         episodes = []
         current_page = 1
@@ -122,6 +125,7 @@ class DDizi(PluginBase):
             poster      = self.fix_url(poster),
             title       = title,
             description = description,
+            tags        = tags,
             rating      = None,
             year        = year,
             actors      = actors,
@@ -134,11 +138,21 @@ class DDizi(PluginBase):
 
         results = []
         # og:video ve JWPlayer kontrolü
+        target_url = None
+
+        # 1. og:video check
         og_video = secici.select_attr("meta[property='og:video']", "content")
         if og_video:
-            og_video = self.fix_url(og_video)
+            target_url = self.fix_url(og_video)
+        else:
+            # 2. Iframe check (/player/oynat/...)
+            iframe_src = secici.select_attr("iframe[src^='/player/oynat/']", "src")
+            if iframe_src:
+                target_url = self.fix_url(iframe_src)
+
+        if target_url:
             with suppress(Exception):
-                player_istek = await self.httpx.get(og_video, headers={"Referer": url})
+                player_istek = await self.httpx.get(target_url, headers={"Referer": url})
                 player_secici = HTMLHelper(player_istek.text)
 
                 # file: '...' logic
@@ -156,21 +170,21 @@ class DDizi(PluginBase):
                             referer    = "https://twitter.com/"
                         ))
                     else:
-                        res = await self.extract(src, referer=og_video)
+                        res = await self.extract(src, referer=target_url)
                         if res:
                             self.collect_results(results, res)
 
-                # Fallback to direct extraction if nothing found but we have og_video
+                # Fallback to target_url itself if nothing found inside
                 if not results:
-                    if any(x in og_video.lower() for x in ["google", "twimg", "mncdn", "akamai", "streambox", ".m3u8", ".mp4", "master.txt"]):
+                     if any(x in target_url.lower() for x in ["google", "twimg", "mncdn", "akamai", "streambox", ".m3u8", ".mp4", "master.txt"]) and ".html" not in target_url:
                         results.append(ExtractResult(
-                            url        = og_video,
+                            url        = target_url,
                             name       = "Video",
                             user_agent = "googleusercontent",
                             referer    = "https://twitter.com/"
                         ))
-                    else:
-                        res = await self.extract(og_video)
+                     else:
+                        res = await self.extract(target_url)
                         if res:
                             self.collect_results(results, res)
 

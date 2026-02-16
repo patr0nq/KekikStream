@@ -1,10 +1,10 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 # ! https://github.com/recloudstream/cloudstream/blob/master/library/src/commonMain/kotlin/com/lagradost/cloudstream3/extractors/Vidmoly.kt
 
-from KekikStream.Core  import ExtractorBase, ExtractResult, Subtitle, HTMLHelper
+from KekikStream.Core  import PackedJSExtractor, ExtractResult, Subtitle, HTMLHelper
 import contextlib, json
 
-class VidMoly(ExtractorBase):
+class VidMoly(PackedJSExtractor):
     name     = "VidMoly"
     main_url = "https://vidmoly.to"
 
@@ -58,7 +58,11 @@ class VidMoly(ExtractorBase):
 
         # Video URL Bulma
         video_url = None
-        if "#EXTM3U" in resp.text:
+
+        # 1. Packed JS unpacked
+        video_url = self.unpack_and_find(resp.text)
+
+        if not video_url and "#EXTM3U" in resp.text:
             for line in resp.text.splitlines():
                 if line.strip().startswith("http"):
                     video_url = line.strip().replace('"', '').replace("'", "")

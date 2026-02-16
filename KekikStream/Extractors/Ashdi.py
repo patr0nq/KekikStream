@@ -1,8 +1,8 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
-from KekikStream.Core import ExtractorBase, ExtractResult, HTMLHelper
+from KekikStream.Core import PackedJSExtractor, ExtractResult, HTMLHelper
 
-class Ashdi(ExtractorBase):
+class Ashdi(PackedJSExtractor):
     name     = "Ashdi"
     main_url = "https://ashdi.vip"
 
@@ -16,9 +16,8 @@ class Ashdi(ExtractorBase):
         )
         secici = HTMLHelper(resp.text)
 
-        # Ashdi uses PlayerJS
-        # Format: file:"..."
-        m3u_link = secici.regex_first(r'file\s*:\s*["\']([^"\']+)["\']')
+        # 1. Packed JS veya Direkt HTML içinde ara
+        m3u_link = self.unpack_and_find(resp.text)
 
         if not m3u_link:
             # Fallback for different PlayerJS variants

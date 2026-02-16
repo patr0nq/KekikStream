@@ -38,6 +38,11 @@ class Filemoon(PackedJSExtractor):
             istek = await self.httpx.get(url)
 
         m3u8_url = self.unpack_and_find(istek.text)
+
+        if not m3u8_url:
+             # Fallback: simple 'file: "..."' check
+             m3u8_url = secici.regex_first(r'file\s*:\s*["\']([^"\']+)["\']')
+
         if not m3u8_url:
             raise ValueError(f"Filemoon: Video URL bulunamadı. {url}")
 
