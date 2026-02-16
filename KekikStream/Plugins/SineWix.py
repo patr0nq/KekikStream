@@ -1,7 +1,7 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
 from KekikStream.Core import PluginBase, MainPageResult, SearchResult, MovieInfo, Episode, SeriesInfo, ExtractResult
-import json
+import re
 
 class SineWix(PluginBase):
     name        = "SineWix"
@@ -46,7 +46,7 @@ class SineWix(PluginBase):
                 url      = f"?type={veri.get('type')}&id={veri.get('id')}",
                 poster   = self.fix_url(veri.get("poster_path")),
             )
-                for veri in veriler.get("data")
+                for veri in veriler.get("data", [])
         ]
 
     async def search(self, query: str) -> list[SearchResult]:
@@ -58,101 +58,78 @@ class SineWix(PluginBase):
                 url    = f"?type={veri.get('type')}&id={veri.get('id')}",
                 poster = self.fix_url(veri.get("poster_path")),
             )
-                for veri in istek.json().get("search")
+                for veri in istek.json().get("search", [])
         ]
 
     async def load_item(self, url: str) -> MovieInfo | SeriesInfo:
         item_type = url.split("?type=")[-1].split("&id=")[0]
         item_id   = url.split("&id=")[-1]
 
-        istek = await self.httpx.get(f"{self.main_url}/sinewix/{item_type}/{item_id}")
-        veri  = istek.json()
+        veri = (await self.httpx.get(f"{self.main_url}/sinewix/{item_type}/{item_id}")).json()
 
-        match item_type:
-            case "movie":
-                org_title = veri.get("title")
-                alt_title = veri.get("original_name") or ""
-                title     = f"{org_title} - {alt_title}" if (alt_title and org_title != alt_title)  else org_title
+        common_data = {
+            "url"         : self.fix_url(f"{self.main_url}/sinewix/{item_type}/{item_id}"),
+            "poster"      : self.fix_url(veri.get("poster_path")),
+            "title"       : f"{veri.get('title') or veri.get('name')} - {veri.get('original_name', '')}".strip(" - "),
+            "description" : veri.get("overview"),
+            "tags"        : [genre.get("name") for genre in veri.get("genres", [])],
+            "rating"      : veri.get("vote_average"),
+            "actors"      : [actor.get("name") for actor in veri.get("casterslist", [])],
+        }
 
-                return MovieInfo(
-                    url         = self.fix_url(f"{self.main_url}/sinewix/{item_type}/{item_id}"),
-                    poster      = self.fix_url(veri.get("poster_path")),
-                    title       = title,
-                    description = veri.get("overview"),
-                    tags        = [genre.get("name") for genre in veri.get("genres")],
-                    rating      = veri.get("vote_average"),
-                    year        = veri.get("release_date"),
-                    actors      = [actor.get("name") for actor in veri.get("casterslist")],
-                )
-            case _:
-                org_title = veri.get("name")
-                alt_title = veri.get("original_name") or ""
-                title     = f"{org_title} - {alt_title}" if (alt_title and org_title != alt_title)  else org_title
+        if item_type == "movie":
+            return MovieInfo(**common_data, year=veri.get("release_date"))
 
-                episodes = []
-                for season in veri.get("seasons"):
-                    for episode in season.get("episodes"):
-                        if not episode.get("videos"):
-                            continue
+        episodes = []
+        for season in veri.get("seasons", []):
+            for episode in season.get("episodes", []):
+                if not episode.get("videos"):
+                    continue
 
-                        # Bölüm için gerekli bilgileri JSON olarak sakla
-                        ep_data = {
-                            "url"        : self.fix_url(episode.get("videos")[0].get("link")),
-                            "title"      : self.name,
-                            "is_episode" : True
-                        }
+                episodes.append(Episode(
+                    season  = season.get("season_number"),
+                    episode = episode.get("episode_number"),
+                    title   = episode.get("name"),
+                    url     = f"{self.main_url}/sinewix/{item_type}/{item_id}/season/{season.get('season_number')}/episode/{episode.get('episode_number')}"
+                ))
 
-                        ep_model = Episode(
-                            season  = season.get("season_number"),
-                            episode = episode.get("episode_number"),
-                            title   = episode.get("name"),
-                            url     = json.dumps(ep_data),
-                        )
-
-                        episodes.append(ep_model)
-
-                return SeriesInfo(
-                    url         = self.fix_url(f"{self.main_url}/sinewix/{item_type}/{item_id}"),
-                    poster      = self.fix_url(veri.get("poster_path")),
-                    title       = title,
-                    description = veri.get("overview"),
-                    tags        = [genre.get("name") for genre in veri.get("genres")],
-                    rating      = veri.get("vote_average"),
-                    year        = veri.get("first_air_date"),
-                    actors      = [actor.get("name") for actor in veri.get("casterslist")],
-                    episodes    = episodes,
-                )
+        return SeriesInfo(**common_data, year=veri.get("first_air_date"), episodes=episodes)
 
     async def load_links(self, url: str) -> list[ExtractResult]:
-        try:
-            veri = json.loads(url)
-            if veri.get("is_episode"):
-                return [ExtractResult(
-                    url     = veri.get("url"),
-                    name    = veri.get("title"),
-                    referer = self.main_url
-                )]
-        except Exception:
-            pass
+        # 1. Eğer halihazırda bir video linkiyse (API değilse) direkt dön
+        ua = self.httpx.headers.get("User-Agent")
+        if not url.startswith(self.main_url) and not url.startswith("?"):
+            return [ExtractResult(url=url, name=self.name, user_agent=ua)]
 
-        # Eğer JSON değilse ve direkt URL ise (eski yapı veya harici link)
-        if not url.startswith(self.main_url) and not url.startswith("{"):
-             return [ExtractResult(url=url, name="Video")]
+        # 2. Kısa URL'yi API URL'sine çevir
+        if url.startswith("?"):
+            item_type = url.split("type=")[-1].split("&id=")[0]
+            item_id   = url.split("&id=")[-1]
+            url       = f"{self.main_url}/sinewix/{item_type}/{item_id}"
 
-        istek = await self.httpx.get(url)
-        veri  = istek.json()
-
-        org_title = veri.get("title")
-        alt_title = veri.get("original_name") or ""
-        title     = f"{org_title} - {alt_title}" if (alt_title and org_title != alt_title)  else org_title
+        # 3. API'den veriyi çek ve mirrorları işle
+        veri    = (await self.httpx.get(url)).json()
+        sources = veri.get("videos") or [{"link": veri.get("link")}]
 
         results = []
-        for video in veri.get("videos"):
-            video_link = video.get("link").split("_blank\">")[-1]
+        for source in sources:
+            if not (raw_link := source.get("link")):
+                continue
+
+            clean_link = re.sub(r'<[^>]*>', '', raw_link.split('_blank">')[-1])
+            final_url  = self.fix_url(clean_link)
+
+            # Akıllı Referer: Linkin kendi domainini referer yapıyoruz
+            try:
+                domain_referer = f"{final_url.split('://')[0]}://{final_url.split('/')[2]}/"
+            except:
+                domain_referer = None
+
             results.append(ExtractResult(
-                url     = video_link,
-                name    = f"{self.name}",
-                referer = self.main_url
+                url        = final_url,
+                name       = self.name,
+                referer    = domain_referer,
+                user_agent = ua
             ))
 
         return results
