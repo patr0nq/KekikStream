@@ -37,9 +37,9 @@ class FilmEkseni(PluginBase):
         return [
             MainPageResult(
                 category = category,
-                title    = self.clean_title(secici.select_text("h2", veri)),
-                url      = secici.select_attr("a", "href", veri),
-                poster   = secici.select_attr("img", "data-src", veri)
+                title    = veri.select_text("h2"),
+                url      = veri.select_attr("a", "href"),
+                poster   = veri.select_attr("img", "data-src")
             )
                 for veri in posters
         ]
@@ -75,7 +75,7 @@ class FilmEkseni(PluginBase):
         istek  = await self.httpx.get(url)
         secici = HTMLHelper(istek.text)
 
-        title       = self.clean_title(secici.select_text("div.page-title h1"))
+        title       = secici.select_text("div.page-title h1")
         poster      = secici.select_poster("picture.poster-auto img")
         description = secici.select_direct_text("article.text-white p")
         year        = secici.extract_year("div.page-title", "strong a")
@@ -129,10 +129,7 @@ class FilmEkseni(PluginBase):
                 # Name override: "Kaynak Adı | Player Adı" olacak şekilde
                 extracted = await self.extract(iframe_url, name_override=name)
                 if extracted:
-                    if isinstance(extracted, list):
-                        results.extend(extracted)
-                    else:
-                        results.append(extracted)
+                    self.collect_results(results, extracted)
 
             return results
         except Exception:
@@ -161,7 +158,7 @@ class FilmEkseni(PluginBase):
                     break
 
                 lang_name    = lang_tabs[i].text(strip=True)
-                player_links = secici.select("a.nav-link", element=pane)
+                player_links = pane.select("a.nav-link")
 
                 for link in player_links:
                     p_name = link.text(strip=True)

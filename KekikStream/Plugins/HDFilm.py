@@ -1,6 +1,6 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
-from KekikStream.Core import PluginBase, MainPageResult, SearchResult, MovieInfo, SeriesInfo, Episode, ExtractResult, Subtitle, HTMLHelper
+from KekikStream.Core import HTMLHelper, PluginBase, MainPageResult, SearchResult, MovieInfo, Episode, SeriesInfo, Subtitle, ExtractResult
 import base64, asyncio, contextlib
 
 class HDFilm(PluginBase):
@@ -44,14 +44,14 @@ class HDFilm(PluginBase):
 
         results = []
         for veri in secici.select("div.movie-poster"):
-            title  = secici.select_attr("img", "alt", veri)
-            poster = secici.select_attr("img", "src", veri)
-            href   = secici.select_attr("a", "href", veri)
+            title  = veri.select_attr("img", "alt")
+            poster = veri.select_attr("img", "src")
+            href   = veri.select_attr("a", "href")
 
             if title and href:
                 results.append(MainPageResult(
                     category = category,
-                    title    = self.clean_title(title),
+                    title    = title,
                     url      = self.fix_url(href),
                     poster   = self.fix_url(poster)
                 ))
@@ -64,13 +64,13 @@ class HDFilm(PluginBase):
 
         results = []
         for veri in secici.select("div.movie-poster"):
-            title  = secici.select_attr("img", "alt", veri)
-            poster = secici.select_attr("img", "src", veri)
-            href   = secici.select_attr("a", "href", veri)
+            title  = veri.select_attr("img", "alt")
+            poster = veri.select_attr("img", "src")
+            href   = veri.select_attr("a", "href")
 
             if title and href:
                 results.append(SearchResult(
-                    title  = self.clean_title(title),
+                    title  = title,
                     url    = self.fix_url(href),
                     poster = self.fix_url(poster)
                 ))
@@ -81,7 +81,7 @@ class HDFilm(PluginBase):
         istek  = await self.httpx.get(url)
         secici = HTMLHelper(istek.text)
 
-        title       = self.clean_title(secici.select_text("h1"))
+        title       = secici.select_text("h1")
         poster      = secici.select_poster("div.poster img")
         description = secici.select_text("div.film") or secici.select_attr("meta[property='og:description']", "content")
         year        = secici.extract_year("div.yayin-tarihi.info") or secici.regex_first(r"\((\d{4})\)")
@@ -94,7 +94,7 @@ class HDFilm(PluginBase):
             episodes = []
             for idx, el in enumerate(secici.select("li.psec")):
                 part_id   = el.attrs.get("id")
-                part_name = secici.select_text("a", el) or ""
+                part_name = el.select_text("a") or ""
                 if not part_name or "fragman" in part_name.lower():
                     continue
 
@@ -176,11 +176,14 @@ class HDFilm(PluginBase):
 
             if action_parts := secici.select_first("div#action-parts"):
                 # Aktif olan wrapper'ları bul
-                for wrapper in secici.select("div.button-custom-wrapper", action_parts):
+                for wrapper in action_parts.select("div.button-custom-wrapper"):
                     # Aktif buton/link
-                    active_el = secici.select_first("button", wrapper) or secici.select_first("a.button", wrapper)
+                    active_el = wrapper.select_first("button") or wrapper.select_first("a.button")
                     if active_el:
-                        parts.append(active_el.text(strip=True))
+                        btn_text = active_el.text(strip=True)
+                        # "İzleme Listesi" gibi gereksiz butonları filtrele
+                        if btn_text and "izleme listesi" not in btn_text.lower():
+                            parts.append(btn_text)
 
             final_name = " | ".join(parts) if parts else "HDFilm"
 
@@ -192,16 +195,12 @@ class HDFilm(PluginBase):
             if iframe_src:
                 data = await self.extract(iframe_src, name_override=final_name)
                 if data:
-                    sub = Subtitle(name="Türkçe", url=subtitle_url) if subtitle_url else None
-                    if isinstance(data, list):
-                        for d in data:
-                            if sub:
-                                d.subtitles.append(sub)
-                            results.append(d)
-                    else:
+                    sub   = Subtitle(name="Türkçe", url=subtitle_url) if subtitle_url else None
+                    items = data if isinstance(data, list) else [data]
+                    for d in items:
                         if sub:
-                            data.subtitles.append(sub)
-                        results.append(data)
+                            d.subtitles.append(sub)
+                        results.append(d)
 
             return results
         except Exception:
@@ -216,7 +215,7 @@ class HDFilm(PluginBase):
         unique_urls = {base_url} # ?page=1 varsa da base_url olarak sakla
 
         if action_parts := secici.select_first("div#action-parts"):
-            for link in secici.select("a[href]", action_parts):
+            for link in action_parts.select("a[href]"):
                 href = link.attrs.get("href", "")
                 if "?page=" in href:
                     if href.endswith("?page=1") or href == "?page=1":

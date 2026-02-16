@@ -36,10 +36,10 @@ class SelcukFlix(PluginBase):
                 sel  = HTMLHelper(resp.text)
 
                 for item in sel.select("div.col-span-3 a"):
-                    name    = sel.select_text("h2", item)
-                    ep_info = sel.select_text("div.opacity-80", item)
-                    href    = sel.select_attr("a", "href", item)
-                    poster  = sel.select_attr("div.image img", "src", item)
+                    name    = item.select_text("h2")
+                    ep_info = item.select_text("div.opacity-80")
+                    href    = item.select_attr("a", "href")
+                    poster  = item.select_attr("div.image img", "src")
 
                     if name and href:
                         title     = f"{name} - {ep_info}" if ep_info else name
@@ -112,9 +112,9 @@ class SelcukFlix(PluginBase):
             data = json.loads(decoded_str)
 
             for item in data.get("result", []):
-                title  = item.get("title")
-                slug   = item.get("slug")
-                poster = self.clean_image_url(item.get("poster")) if item.get("poster") else None
+                title  = item.get("original_title") or item.get("used_title") or item.get("culture_title") or item.get("title")
+                slug   = item.get("used_slug") or item.get("slug")
+                poster = self.clean_image_url(item.get("poster_url") or item.get("face_url") or item.get("poster")) if (item.get("poster_url") or item.get("face_url") or item.get("poster")) else None
 
                 if slug:
                     results.append(MainPageResult(
@@ -181,13 +181,13 @@ class SelcukFlix(PluginBase):
 
         next_data_text = sel.select_text("script#__NEXT_DATA__")
         if not next_data_text:
-            return SeriesInfo(url=url, title=self.clean_title(sel.select_text("h1")) or "Bilinmeyen")
+            return SeriesInfo(url=url, title=sel.select_text("h1") or "Bilinmeyen")
 
         try:
             next_data = json.loads(next_data_text)
             secure_data_raw = next_data["props"]["pageProps"].get("secureData")
             if not secure_data_raw:
-                  return SeriesInfo(url=url, title=self.clean_title(sel.select_text("h1")) or "Bilinmeyen")
+                  return SeriesInfo(url=url, title=sel.select_text("h1") or "Bilinmeyen")
 
             # Clean possible quotes from string before decoding
             if isinstance(secure_data_raw, str):
@@ -200,7 +200,7 @@ class SelcukFlix(PluginBase):
             item            = content_details.get("contentItem", {})
             related_results = content_details.get("RelatedResults", {})
 
-            title       = self.clean_title(item.get("original_title") or item.get("culture_title") or item.get("originalTitle") or "")
+            title       = item.get("original_title") or item.get("culture_title") or item.get("originalTitle") or ""
             poster      = self.clean_image_url(item.get("poster_url") or item.get("posterUrl") or item.get("face_url"))
             description = item.get("description") or item.get("used_description")
             rating      = str(item.get("imdb_point") or item.get("imdbPoint") or "")
@@ -250,7 +250,7 @@ class SelcukFlix(PluginBase):
             return MovieInfo(**common_info)
 
         except Exception:
-            return SeriesInfo(url=url, title=self.clean_title(sel.select_text("h1")) or "Bilinmeyen")
+            return SeriesInfo(url=url, title=sel.select_text("h1") or "Bilinmeyen")
 
     async def load_links(self, url: str) -> list[ExtractResult]:
         resp = await self.httpx.get(url)

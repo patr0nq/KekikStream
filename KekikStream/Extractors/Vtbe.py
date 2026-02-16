@@ -1,34 +1,18 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
-from KekikStream.Core import ExtractorBase, ExtractResult, HTMLHelper
-from Kekik.Sifreleme  import Packer
+from KekikStream.Core import PackedJSExtractor, ExtractResult, SOURCES_REGEX
 
-class Vtbe(ExtractorBase):
-    name     = "Vtbe"
-    main_url = "https://vtbe.to"
+class Vtbe(PackedJSExtractor):
+    name        = "Vtbe"
+    main_url    = "https://vtbe.to"
+    url_pattern = SOURCES_REGEX
 
-    async def extract(self, url: str, referer: str = None) -> list[ExtractResult]:
-        # Iframe ise embed url'i düzeltmek gerekebilir ama genelde embed-xxxx.html formatı
+    async def extract(self, url: str, referer: str = None) -> ExtractResult:
         istek = await self.httpx.get(url, headers={"Referer": referer or self.main_url})
-        text  = istek.text
 
-        # Packed script bul: function(p,a,c,k,e,d)
-        packed = HTMLHelper(text).regex_first(r'(eval\s*\(\s*function[\s\S]+?)<\/script>')
-
-        if not packed:
-            raise ValueError(f"Vtbe: Packed script bulunamadı. {url}")
-
-        unpacked = ""
-        try:
-            unpacked = Packer.unpack(packed)
-        except:
-             raise ValueError("Vtbe: Unpack hatası")
-
-        # sources:[{file:"..."
-        file_url = HTMLHelper(unpacked).regex_first(r'sources:\s*\[\s*\{\s*file:\s*"([^"]+)"')
-
+        file_url = self.unpack_and_find(istek.text)
         if not file_url:
-            raise ValueError("Vtbe: Video URL (file) bulunamadı")
+            raise ValueError(f"Vtbe: Video URL bulunamadı. {url}")
 
         return ExtractResult(
             name       = self.name,

@@ -12,10 +12,10 @@ class Voe(ExtractorBase):
 
     async def extract(self, url: str, referer: str = None) -> ExtractResult:
         try:
-            # Voe often uses protection (DDG, etc.), use cloudscraper via PluginBase
-            resp    = self.cloudscraper.get(url, headers={"Referer": referer or self.main_url})
+            # Voe often uses protection (DDG, etc.), use cloudscraper async wrapper
+            resp    = await self.async_cf_get(url, headers={"Referer": referer or self.main_url})
             content = resp.text
-        except:
+        except Exception:
             resp    = await self.httpx.get(url, headers={"Referer": referer or self.main_url})
             content = resp.text
 
@@ -34,7 +34,7 @@ class Voe(ExtractorBase):
                         url     = video_url,
                         referer = url
                     )
-            except:
+            except Exception:
                 pass
 
         # Method 2: Sources regex

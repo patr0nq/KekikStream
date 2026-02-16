@@ -1,10 +1,9 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
-from KekikStream.Core  import ExtractorBase, ExtractResult, Subtitle, HTMLHelper
-from Kekik.Sifreleme   import Packer, StreamDecoder
+from KekikStream.Core  import PackedJSExtractor, ExtractResult, Subtitle, HTMLHelper
 import json, contextlib
 
-class CloseLoad(ExtractorBase):
+class CloseLoad(PackedJSExtractor):
     name     = "CloseLoad"
     main_url = "https://closeload.filmmakinesi.to"
 
@@ -27,10 +26,9 @@ class CloseLoad(ExtractorBase):
                         m3u8_url = content_url
                         break
 
-        # 2. Packed Script Fallback
+        # 2. Packed Script Fallback (unpack_and_find ile)
         if not m3u8_url:
-            if packed := sel.regex_first(r"(eval\(function\(p,a,c,k,e,d\).+?)\s*</script>"):
-                m3u8_url = StreamDecoder.extract_stream_url(Packer.unpack(packed))
+            m3u8_url = self.unpack_and_find(resp.text)
 
         if not m3u8_url:
             raise ValueError(f"CloseLoad: Video URL bulunamadı. {url}")

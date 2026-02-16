@@ -28,7 +28,7 @@ class JetCDN(ExtractorBase):
                 for sub in subs_data:
                     if s_url := sub.get("file"):
                         subtitles.append(Subtitle(name=sub.get("label", "Unknown"), url=s_url.replace("\\", "")))
-            except:
+            except Exception:
                 pass
 
         if video_turkish:

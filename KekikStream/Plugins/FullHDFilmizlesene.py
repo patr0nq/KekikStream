@@ -40,14 +40,14 @@ class FullHDFilmizlesene(PluginBase):
     }
 
     async def get_main_page(self, page: int, url: str, category: str) -> list[MainPageResult]:
-        istek  = self.cloudscraper.get(f"{url}{page}")
+        istek  = await self.async_cf_get(f"{url}{page}")
         secici = HTMLHelper(istek.text)
 
         results = []
         for veri in secici.select("li.film"):
-            title = secici.select_text("span.film-title", veri)
-            href = secici.select_attr("a", "href", veri)
-            poster = secici.select_attr("img", "data-src", veri)
+            title = veri.select_text("span.film-title")
+            href = veri.select_attr("a", "href")
+            poster = veri.select_attr("img", "data-src")
 
             if title and href:
                 results.append(MainPageResult(
@@ -65,9 +65,9 @@ class FullHDFilmizlesene(PluginBase):
 
         results = []
         for film in secici.select("li.film"):
-            title  = secici.select_text("span.film-title", film)
-            href   = secici.select_attr("a", "href", film)
-            poster = secici.select_attr("img", "data-src", film)
+            title  = film.select_text("span.film-title")
+            href   = film.select_attr("a", "href")
+            poster = film.select_attr("img", "data-src")
 
             if title and href:
                 results.append(SearchResult(
@@ -82,13 +82,14 @@ class FullHDFilmizlesene(PluginBase):
         istek  = await self.httpx.get(url)
         secici = HTMLHelper(istek.text)
 
-        title       = self.clean_title(secici.select_text("div.izle-titles"))
+        title       = secici.select_text("div.izle-titles")
         poster      = secici.select_poster("div img[data-src]")
         description = secici.select_text("div.ozet-ic")
         tags        = secici.select_texts("a[rel='category tag']")
         rating      = secici.regex_first(r"(\d+\.\d+|\d+)", secici.select_text("div.puanx-puan"))
         year        = secici.extract_year("div.dd a.category")
-        actors      = secici.select_texts("a > span", secici.select_first("div.film-info ul li:nth-child(2)"))
+        actors_el   = secici.select_first("div.film-info ul li:nth-child(2)")
+        actors      = actors_el.select_texts("a > span") if actors_el else []
         duration    = secici.regex_first(r"Süre: (\d+)\s*dk", secici.select_text("div.ozet-ic"))
 
         return MovieInfo(
@@ -129,7 +130,6 @@ class FullHDFilmizlesene(PluginBase):
         response = []
         for link in link_list:
             data = await self.extract(self.fix_url(link))
-            if data:
-                response.append(data)
+            self.collect_results(response, data)
 
         return response

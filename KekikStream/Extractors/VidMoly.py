@@ -2,7 +2,7 @@
 # ! https://github.com/recloudstream/cloudstream/blob/master/library/src/commonMain/kotlin/com/lagradost/cloudstream3/extractors/Vidmoly.kt
 
 from KekikStream.Core  import ExtractorBase, ExtractResult, Subtitle, HTMLHelper
-import re, contextlib, json
+import contextlib, json
 
 class VidMoly(ExtractorBase):
     name     = "VidMoly"

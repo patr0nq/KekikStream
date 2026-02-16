@@ -47,9 +47,9 @@ class Sinezy(PluginBase):
 
         results = []
         for item in secici.select("div.container div.content div.movie_box.move_k"):
-            title  = secici.select_attr("a", "title", item)
-            href   = secici.select_attr("a", "href", item)
-            poster = secici.select_attr("img", "data-src", item)
+            title  = item.select_attr("a", "title")
+            href   = item.select_attr("a", "href")
+            poster = item.select_attr("img", "data-src")
 
             if title and href:
                 results.append(MainPageResult(
@@ -67,9 +67,9 @@ class Sinezy(PluginBase):
 
         results = []
         for item in secici.select("div.movie_box.move_k"):
-            title  = secici.select_attr("a", "title", item)
-            href   = secici.select_attr("a", "href", item)
-            poster = secici.select_attr("img", "data-src", item)
+            title  = item.select_attr("a", "title")
+            href   = item.select_attr("a", "href")
+            poster = item.select_attr("img", "data-src")
 
             if title and href:
                 results.append(SearchResult(

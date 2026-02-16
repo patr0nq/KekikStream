@@ -33,10 +33,10 @@ class SetFilmIzle(PluginBase):
         f"{main_url}/tur/western/"     : "Western"
     }
 
-    def _get_nonce(self, nonce_type: str = "video", referer: str = None) -> str:
+    async def _get_nonce(self, nonce_type: str = "video", referer: str = None) -> str:
         """Site cache'lenmiş nonce'ları expire olabiliyor, fresh nonce al veya sayfadan çek"""
         with contextlib.suppress(Exception):
-            resp = self.cloudscraper.post(
+            resp = await self.async_cf_post(
                 f"{self.main_url}/wp-admin/admin-ajax.php",
                 headers = {
                     "Referer"      : referer or self.main_url,
@@ -52,7 +52,7 @@ class SetFilmIzle(PluginBase):
 
         # AJAX başarısızsa sayfadan çekmeyi dene
         with contextlib.suppress(Exception):
-            main_resp = self.cloudscraper.get(referer or self.main_url)
+            main_resp = await self.async_cf_get(referer or self.main_url)
             # STMOVIE_AJAX = { ... nonces: { search: "...", ... } }
             nonce = HTMLHelper(main_resp.text).regex_first(rf'"{nonce_type}":\s*"([^"]+)"')
             return nonce or ""
@@ -60,14 +60,14 @@ class SetFilmIzle(PluginBase):
         return ""
 
     async def get_main_page(self, page: int, url: str, category: str) -> list[MainPageResult]:
-        istek  = self.cloudscraper.get(url)
+        istek  = await self.async_cf_get(url)
         secici = HTMLHelper(istek.text)
 
         results = []
         for item in secici.select("div.items article"):
-            title  = secici.select_text("h2", item)
-            href   = secici.select_attr("a", "href", item)
-            poster = secici.select_attr("img", "data-src", item)
+            title  = item.select_text("h2")
+            href   = item.select_attr("a", "href")
+            poster = item.select_attr("img", "data-src")
 
             if title and href:
                 results.append(MainPageResult(
@@ -80,9 +80,9 @@ class SetFilmIzle(PluginBase):
         return results
 
     async def search(self, query: str) -> list[SearchResult]:
-        nonce = self._get_nonce("search")
+        nonce = await self._get_nonce("search")
 
-        search_resp = self.cloudscraper.post(
+        search_resp = await self.async_cf_post(
             f"{self.main_url}/wp-admin/admin-ajax.php",
             headers = {
                 "X-Requested-With" : "XMLHttpRequest",
@@ -100,16 +100,16 @@ class SetFilmIzle(PluginBase):
         try:
             data = search_resp.json()
             html = data.get("html", "")
-        except:
+        except Exception:
             return []
 
         secici  = HTMLHelper(html)
 
         results = []
         for item in secici.select("div.items article"):
-            title  = secici.select_text("h2", item)
-            href   = secici.select_attr("a", "href", item)
-            poster = secici.select_attr("img", "data-src", item)
+            title  = item.select_text("h2")
+            href   = item.select_attr("a", "href")
+            poster = item.select_attr("img", "data-src")
 
             if title and href:
                 results.append(SearchResult(
@@ -121,16 +121,17 @@ class SetFilmIzle(PluginBase):
         return results
 
     async def load_item(self, url: str) -> MovieInfo | SeriesInfo:
-        istek  = self.cloudscraper.get(url)
+        istek  = await self.async_cf_get(url)
         secici = HTMLHelper(istek.text)
 
-        title       = self.clean_title(secici.select_text("h1") or secici.select_text(".titles h1") or secici.select_attr("meta[property='og:title']", "content"))
+        title       = secici.select_text("h1") or secici.select_text(".titles h1") or secici.select_attr("meta[property='og:title']", "content")
         poster      = secici.select_poster("div.poster img")
         description = secici.select_text("div.wp-content p")
         rating      = secici.select_text("b#repimdb strong") or secici.regex_first(r"([\d.]+)", secici.select_text("div.imdb"))
         year        = secici.extract_year("div.extra span.valor")
         tags        = secici.select_texts("div.sgeneros a")
-        duration    = int(secici.regex_first(r"(\d+)", secici.select_text("span.runtime")) or 0)
+        runtime_text = secici.regex_first(r"(\d+)", secici.select_text("span.runtime"))
+        duration    = int(runtime_text) if runtime_text else None
         actors      = secici.select_texts("span.valor a[href*='/oyuncu/']")
 
         common_info = {
@@ -148,8 +149,8 @@ class SetFilmIzle(PluginBase):
         if "/dizi/" in url:
             episodes = []
             for ep_item in secici.select("div#episodes ul.episodios li"):
-                href = secici.select_attr("h4.episodiotitle a", "href", ep_item)
-                name = secici.select_direct_text("h4.episodiotitle a", ep_item)
+                href = ep_item.select_attr("h4.episodiotitle a", "href")
+                name = ep_item.select_direct_text("h4.episodiotitle a")
                 if href and name:
                     s, e = secici.extract_season_episode(name)
                     episodes.append(Episode(season=s or 1, episode=e or 1, title=name, url=self.fix_url(href)))
@@ -176,14 +177,14 @@ class SetFilmIzle(PluginBase):
         async def fetch_and_extract(player) -> list[ExtractResult]:
             async with semaphore:
                 source_id   = player.attrs.get("data-post-id")
-                player_name = player.attrs.get("data-player-name") or secici.select_text("b", player)
+                player_name = player.attrs.get("data-player-name") or player.select_text("b")
                 part_key    = player.attrs.get("data-part-key")
 
                 if not source_id or "event" in source_id or source_id == "":
                     return []
 
                 try:
-                    resp = self.cloudscraper.post(
+                    resp = await self.async_cf_post(
                         f"{self.main_url}/wp-admin/admin-ajax.php",
                         headers = {"Referer": url},
                         data    = {
@@ -195,7 +196,7 @@ class SetFilmIzle(PluginBase):
                         }
                     )
                     data = resp.json()
-                except:
+                except Exception:
                     return []
 
                 iframe_url = data.get("data", {}).get("url")

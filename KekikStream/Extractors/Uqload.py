@@ -18,8 +18,8 @@ class Uqload(ExtractorBase):
         try:
             resp    = await self.httpx.get(url, headers=headers)
             content = resp.text
-        except:
-            resp    = self.cloudscraper.get(url, headers=headers)
+        except Exception:
+            resp    = await self.async_cf_get(url, headers=headers)
             content = resp.text
 
         secici = HTMLHelper(content)

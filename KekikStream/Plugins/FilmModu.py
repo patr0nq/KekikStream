@@ -44,9 +44,9 @@ class FilmModu(PluginBase):
 
         results = []
         for veri in secici.select("div.movie"):
-            title  = secici.select_text("a", veri)
-            href   = secici.select_attr("a", "href", veri)
-            poster = secici.select_attr("picture img", "data-src", veri)
+            title  = veri.select_text("a")
+            href   = veri.select_attr("a", "href")
+            poster = veri.select_attr("picture img", "data-src")
 
             if title and href:
                 results.append(MainPageResult(
@@ -64,9 +64,9 @@ class FilmModu(PluginBase):
 
         results = []
         for veri in secici.select("div.movie"):
-            title  = secici.select_text("a", veri)
-            href   = secici.select_attr("a", "href", veri)
-            poster = secici.select_attr("picture img", "data-src", veri)
+            title  = veri.select_text("a")
+            href   = veri.select_attr("a", "href")
+            poster = veri.select_attr("picture img", "data-src")
 
             if title and href:
                 results.append(SearchResult(

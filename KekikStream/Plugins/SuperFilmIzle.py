@@ -44,16 +44,16 @@ class SuperFilmIzle(PluginBase):
 
         results = []
         for veri in secici.select("div.movie-box"):
-            title_text = secici.select_text("div.name a", veri)
+            title_text = veri.select_text("div.name a")
             if not title_text:
                 continue
 
-            href   = secici.select_attr("div.name a", "href", veri)
-            poster = secici.select_poster("img", veri)
+            href   = veri.select_attr("div.name a", "href")
+            poster = veri.select_poster("img")
 
             results.append(MainPageResult(
                 category = category,
-                title    = self.clean_title(title_text),
+                title    = title_text,
                 url      = self.fix_url(href),
                 poster   = self.fix_url(poster),
             ))
@@ -66,15 +66,15 @@ class SuperFilmIzle(PluginBase):
 
         results = []
         for veri in secici.select("div.movie-box"):
-            title_text = secici.select_text("div.name a", veri)
+            title_text = veri.select_text("div.name a")
             if not title_text:
                 continue
 
-            href   = secici.select_attr("div.name a", "href", veri)
-            poster = secici.select_poster("img", veri)
+            href   = veri.select_attr("div.name a", "href")
+            poster = veri.select_poster("img")
 
             results.append(SearchResult(
-                title  = self.clean_title(title_text),
+                title  = title_text,
                 url    = self.fix_url(href),
                 poster = self.fix_url(poster),
             ))
@@ -85,7 +85,7 @@ class SuperFilmIzle(PluginBase):
         istek  = await self.httpx.get(url)
         secici = HTMLHelper(istek.text)
 
-        title       = self.clean_title(secici.select_text("div.film h1"))
+        title       = secici.select_text("div.film h1")
         poster      = secici.select_poster("div.poster img")
         year        = secici.extract_year("div.release a")
         description = secici.select_direct_text("div.description")
@@ -106,7 +106,7 @@ class SuperFilmIzle(PluginBase):
         )
 
     async def load_links(self, url: str) -> list[ExtractResult]:
-        istek     = await self.httpx.get(url)
+        istek     = await self.async_cf_get(url)
         main_text = istek.text
         secici    = HTMLHelper(main_text)
 
@@ -118,14 +118,14 @@ class SuperFilmIzle(PluginBase):
         part_items = secici.select("div#action-parts li.part")
         if part_items:
             for li in part_items:
-                name = secici.select_text("div.part-name", li) or "Alternatif"
+                name = li.select_text("div.part-name") or "Alternatif"
 
                 # Aktif olan parça (Mevcut sayfada)
                 if "active" in li.attrs.get("class", []):
                     sources.append((None, name, False))
 
                 # Pasif olanlar (Link verilmişse)
-                elif a_tag := secici.select_first("a.post-page-numbers", li):
+                elif a_tag := li.select_first("a.post-page-numbers"):
                     href = a_tag.attrs.get("href")
                     if href:
                         sources.append((self.fix_url(href), name, True))
@@ -145,7 +145,7 @@ class SuperFilmIzle(PluginBase):
                 try:
                     resp = await self.httpx.get(src_url)
                     html_to_parse = resp.text
-                except:
+                except Exception:
                     return []
 
             # HTML içindeki iframeleri topla
@@ -159,10 +159,7 @@ class SuperFilmIzle(PluginBase):
             results = []
             for ifr_url in iframes:
                 if extracted := await self.extract(ifr_url, prefix=src_name or None):
-                    if isinstance(extracted, list):
-                        results.extend(extracted)
-                    else:
-                        results.append(extracted)
+                    self.collect_results(results, extracted)
             return results
 
         for src in sources:

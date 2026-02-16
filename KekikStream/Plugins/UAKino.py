@@ -43,14 +43,14 @@ class UAKino(PluginBase):
         secici = HTMLHelper(html)
         sonuc  = []
         for li in secici.select("ul > li"):
-            dosya = secici.select_attr(None, "data-file", element=li)
+            dosya = li.select_attr(None, "data-file")
             if not dosya:
                 continue
             sonuc.append({
                 "file"    : self._fix_file_url(dosya),
                 "name"    : li.text().strip(),
-                "voice"   : secici.select_attr(None, "data-voice", element=li) or "",
-                "data_id" : secici.select_attr(None, "data-id", element=li) or "",
+                "voice"   : li.select_attr(None, "data-voice") or "",
+                "data_id" : li.select_attr(None, "data-id") or "",
             })
         return sonuc
 
@@ -62,9 +62,9 @@ class UAKino(PluginBase):
         for veri in secici.select("div.owl-item, div.movie-item"):
             results.append(MainPageResult(
                 category = category,
-                title    = secici.select_text("a.movie-title", element=veri),
-                url      = secici.select_attr("a.movie-title", "href", element=veri),
-                poster   = self.fix_url(secici.select_attr("img", "src", element=veri)),
+                title    = veri.select_text("a.movie-title"),
+                url      = self.fix_url(veri.select_attr("a.movie-title", "href")),
+                poster   = self.fix_url(veri.select_attr("img", "src")),
             ))
         return results
 
@@ -78,9 +78,9 @@ class UAKino(PluginBase):
         results = []
         for veri in secici.select("div.movie-item.short-item"):
             results.append(SearchResult(
-                title  = secici.select_text("a.movie-title", element=veri),
-                url    = secici.select_attr("a.movie-title", "href", element=veri),
-                poster = self.fix_url(secici.select_attr("img", "src", element=veri)),
+                title  = veri.select_text("a.movie-title"),
+                url    = self.fix_url(veri.select_attr("a.movie-title", "href")),
+                poster = self.fix_url(veri.select_attr("img", "src")),
             ))
         return results
 
@@ -163,7 +163,7 @@ class UAKino(PluginBase):
         if "ashdi.vip" in url:
             ext = await self.extract(url, referer=f"{self.main_url}/")
             if ext:
-                results.extend(ext if isinstance(ext, list) else [ext])
+                self.collect_results(results, ext)
             return results
 
         # Uakino sayfası → AJAX ile playlist al
@@ -179,7 +179,7 @@ class UAKino(PluginBase):
             for item in items:
                 ext = await self.extract(item["file"], referer=f"{self.main_url}/", name_override=f"{self.name} | {item['voice']}" if item["voice"] else None)
                 if ext:
-                    results.extend(ext if isinstance(ext, list) else [ext])
+                    self.collect_results(results, ext)
 
         # iframe#pre fallback
         if not results:
@@ -188,6 +188,6 @@ class UAKino(PluginBase):
                 iframe_src = self._fix_file_url(iframe_src)
                 ext = await self.extract(iframe_src, referer=url)
                 if ext:
-                    results.extend(ext if isinstance(ext, list) else [ext])
+                    self.collect_results(results, ext)
 
         return results

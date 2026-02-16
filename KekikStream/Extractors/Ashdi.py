@@ -33,11 +33,11 @@ class Ashdi(ExtractorBase):
 
         # If it's a relative link (unlikely but possible)
         if m3u_link.startswith("/"):
-            m3u_link = f"https://ashdi.vip{m3u_link}"
+            m3u_link = f"{self.main_url}{m3u_link}"
 
         return ExtractResult(
             name       = self.name,
             url        = m3u_link,
-            referer    = "https://ashdi.vip/",
+            referer    = f"{self.main_url}/",
             user_agent = self.httpx.headers.get("User-Agent")
         )

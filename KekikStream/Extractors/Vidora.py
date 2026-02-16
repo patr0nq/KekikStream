@@ -1,12 +1,11 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
-from KekikStream.Core import ExtractorBase, ExtractResult, HTMLHelper
-from Kekik.Sifreleme  import Packer
-from contextlib       import suppress
+from KekikStream.Core import PackedJSExtractor, ExtractResult, HTMLHelper, M3U8_FILE_REGEX
 
-class Vidora(ExtractorBase):
-    name     = "Vidora"
-    main_url = "https://vidora.stream"
+class Vidora(PackedJSExtractor):
+    name        = "Vidora"
+    main_url    = "https://vidora.stream"
+    url_pattern = M3U8_FILE_REGEX
 
     supported_domains = [
         "vidora.stream",
@@ -24,23 +23,12 @@ class Vidora(ExtractorBase):
         istek  = await self.httpx.get(embed_url, headers=headers, follow_redirects=True)
         secici = HTMLHelper(istek.text)
 
-        # Eğer iframe varsa, iframe'e git (Kotlin: iframeElement check)
+        # Iframe varsa takip et
         iframe_src = secici.select_attr("iframe", "src")
         if iframe_src:
             istek  = await self.httpx.get(self.fix_url(iframe_src), headers=headers, follow_redirects=True)
-            secici = HTMLHelper(istek.text)
 
-        # Packed script'ten m3u8 çıkar (Kotlin: getAndUnpack)
-        m3u8_url = None
-        if packed := secici.regex_first(r"(eval\(function\(p,a,c,k,e,d\).+?)\s*</script>"):
-            with suppress(Exception):
-                unpacked = Packer.unpack(packed)
-                m3u8_url = HTMLHelper(unpacked).regex_first(r'file:\s*"(.*?m3u8.*?)"')
-
-        # Fallback: sources script'ten
-        if not m3u8_url:
-            m3u8_url = secici.regex_first(r'file:\s*"(.*?m3u8.*?)"')
-
+        m3u8_url = self.unpack_and_find(istek.text)
         if not m3u8_url:
             raise ValueError(f"Vidora: Video URL bulunamadı. {url}")
 

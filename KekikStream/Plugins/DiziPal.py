@@ -37,9 +37,9 @@ class DiziPal(PluginBase):
 
         results = []
         for veri in secici.select("div.grid div.post-item"):
-            title  = secici.select_attr("a", "title", veri)
-            href   = secici.select_attr("a", "href", veri)
-            poster = secici.select_poster("div.poster img", veri)
+            title  = veri.select_attr("a", "title")
+            href   = veri.select_attr("a", "href")
+            poster = veri.select_poster("div.poster img")
 
             if title and href:
                 results.append(MainPageResult(
@@ -57,9 +57,9 @@ class DiziPal(PluginBase):
 
         results = []
         for veri in secici.select("div.grid div.post-item"):
-            title  = secici.select_attr("a", "title", veri)
-            href   = secici.select_attr("a", "href", veri)
-            poster = secici.select_poster("div.poster img", veri)
+            title  = veri.select_attr("a", "title")
+            href   = veri.select_attr("a", "href")
+            poster = veri.select_poster("div.poster img")
 
             if title and href:
                 results.append(SearchResult(
@@ -104,11 +104,11 @@ class DiziPal(PluginBase):
         if "/dizi/" in url:
             episodes = []
             for ep in secici.select("div.episode-item"):
-                name       = secici.select_text("h4 a", ep)
-                href       = secici.select_attr("a", "href", ep)
-                link_title = secici.select_attr("a", "title", ep)
+                name       = ep.select_text("h4 a")
+                href       = ep.select_attr("a", "href")
+                link_title = ep.select_attr("a", "title")
 
-                h4_texts = secici.select_texts("h4", ep)
+                h4_texts = ep.select_texts("h4")
                 text     = h4_texts[1] if len(h4_texts) > 1 else (h4_texts[0] if h4_texts else "")
 
                 full_text = f"{text} {link_title}" if link_title else text
@@ -188,7 +188,6 @@ class DiziPal(PluginBase):
         else:
             # Extractor'a yönlendir
             data = await self.extract(iframe)
-            if data:
-                results.append(data)
+            self.collect_results(results, data)
 
         return results

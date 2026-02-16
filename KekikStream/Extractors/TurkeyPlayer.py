@@ -1,6 +1,6 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
-from KekikStream.Core import ExtractorBase, ExtractResult, Subtitle, HTMLHelper
+from KekikStream.Core import ExtractorBase, ExtractResult, HTMLHelper
 import json
 
 class TurkeyPlayer(ExtractorBase):
@@ -23,7 +23,7 @@ class TurkeyPlayer(ExtractorBase):
         video_id  = video_data.get("id")
         video_md5 = video_data.get("md5")
 
-        master_url = f"https://watch.turkeyplayer.com/m3u8/8/{video_md5}/master.txt?s=1&id={video_id}&cache=1"
+        master_url = f"{self.main_url}m3u8/8/{video_md5}/master.txt?s=1&id={video_id}&cache=1"
 
         return ExtractResult(
             name       = self.name,

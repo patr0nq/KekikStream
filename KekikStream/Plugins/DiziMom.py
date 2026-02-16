@@ -16,13 +16,10 @@ class DiziMom(PluginBase):
         f"{main_url}/tv-programlari-izle/page"        : "TV Programları",
         f"{main_url}/netflix-dizileri-izle/page"      : "Netflix Dizileri",
         f"{main_url}/turkce-dublaj-diziler-hd/page"   : "Dublajlı Diziler",
-        f"{main_url}/yerli-dizi-izle/page"            : "Yerli Diziler",
         f"{main_url}/anime-izle/page"                 : "Animeler",
-        f"{main_url}/yabanci-dizi-izle/page"          : "Yabancı Diziler",
         f"{main_url}/kore-dizileri-izle-hd/page"      : "Kore Dizileri",
         f"{main_url}/full-hd-hint-dizileri-izle/page" : "Hint Dizileri",
         f"{main_url}/pakistan-dizileri-izle/page"     : "Pakistan Dizileri",
-        f"{main_url}/tv-programlari-izle/page"        : "Tv Programları",
     }
 
     async def get_main_page(self, page: int, url: str, category: str) -> list[MainPageResult]:
@@ -33,9 +30,9 @@ class DiziMom(PluginBase):
         # Eğer "tum-bolumler" ise Episode kutularını, değilse Dizi kutularını tara
         if "/tum-bolumler/" in url:
             for item in secici.select("div.episode-box"):
-                title = secici.select_text("div.episode-name a", item)
-                href  = secici.select_attr("div.episode-name a", "href", item)
-                img   = secici.select_poster("div.cat-img img", item)
+                title = item.select_text("div.episode-name a")
+                href  = item.select_attr("div.episode-name a", "href")
+                img   = item.select_poster("div.cat-img img")
                 if title and href:
                     results.append(MainPageResult(
                         category = category,
@@ -45,9 +42,9 @@ class DiziMom(PluginBase):
                     ))
         else:
             for item in secici.select("div.single-item"):
-                title = secici.select_text("div.categorytitle a", item)
-                href  = secici.select_attr("div.categorytitle a", "href", item)
-                img   = secici.select_poster("div.cat-img img", item)
+                title = item.select_text("div.categorytitle a")
+                href  = item.select_attr("div.categorytitle a", "href")
+                img   = item.select_poster("div.cat-img img")
                 if title and href:
                     results.append(MainPageResult(
                         category = category,
@@ -65,9 +62,9 @@ class DiziMom(PluginBase):
 
         return [
             SearchResult(
-                title  = secici.select_text("div.categorytitle a", item).split(" izle")[0],
-                url    = self.fix_url(secici.select_attr("div.categorytitle a", "href", item)),
-                poster = self.fix_url(secici.select_attr("div.cat-img img", "src", item))
+                title  = item.select_text("div.categorytitle a").split(" izle")[0],
+                url    = self.fix_url(item.select_attr("div.categorytitle a", "href")),
+                poster = self.fix_url(item.select_attr("div.cat-img img", "src"))
             )
             for item in items
         ]
@@ -76,7 +73,7 @@ class DiziMom(PluginBase):
         istek  = await self.httpx.get(url)
         secici = HTMLHelper(istek.text)
 
-        title       = self.clean_title(secici.select_text("div.title h1"))
+        title       = secici.select_text("div.title h1")
         poster      = secici.select_poster("div.category_image img")
         description = secici.select_direct_text("div.category_desc")
         tags        = secici.select_texts("div.genres a")
@@ -86,14 +83,14 @@ class DiziMom(PluginBase):
 
         episodes = []
         for item in secici.select("div.bolumust"):
-            name = secici.select_text("div.baslik", item)
-            href = secici.select_attr("a", "href", item)
+            name = item.select_text("div.baslik")
+            href = item.select_attr("a", "href")
             if name and href:
                 s, e = secici.extract_season_episode(name)
                 episodes.append(Episode(
                     season  = s or 1,
                     episode = e or 1,
-                    title   = self.clean_title(name.replace(title, "").strip()),
+                    title   = name.replace(title, "").strip(),
                     url     = self.fix_url(href)
                 ))
 
@@ -140,13 +137,13 @@ class DiziMom(PluginBase):
             main_iframe = secici.select_attr("div.video p iframe", "src")
 
         if main_iframe:
-            iframe_data.append((main_iframe, current_name))
+            iframe_data.append((main_iframe, current_name or "Varsayılan"))
 
         # Diğer kaynakları (Partlar) gez
         sources = secici.select("div.sources a.post-page-numbers")
         for source in sources:
-            href = secici.select_attr(None, "href", source)
-            name = secici.select_text("span.dil", source)
+            href = source.select_attr(None, "href")
+            name = source.select_text("span.dil")
             if href:
                 # Part sayfasına git
                 sub_istek  = await self.httpx.get(href)
@@ -165,10 +162,7 @@ class DiziMom(PluginBase):
             extract_result = await self.extract(iframe_url, prefix=source_name)
 
             if extract_result:
-                if isinstance(extract_result, list):
-                    results.extend(extract_result)
-                else:
-                    results.append(extract_result)
+                self.collect_results(results, extract_result)
             else:
                  results.append(ExtractResult(
                     url     = iframe_url,

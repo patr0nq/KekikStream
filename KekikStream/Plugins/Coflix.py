@@ -27,7 +27,7 @@ class Coflix(PluginBase):
             data = istek.json()
             results = []
             for item in data.get("results", []):
-                title = item.get("name", "Unknown")
+                title = self.clean_title(item.get("name", "Unknown"))
                 href  = self.fix_url(item.get("url", ""))
 
                 # Poster from HTML path usually contains img tag
@@ -36,12 +36,12 @@ class Coflix(PluginBase):
 
                 results.append(MainPageResult(
                     category = category,
-                    title    = self.clean_title(title),
+                    title    = title,
                     url      = href,
                     poster   = poster
                 ))
             return results
-        except:
+        except Exception:
             return []
 
     def _extract_img_src(self, html: str) -> str:
@@ -64,17 +64,17 @@ class Coflix(PluginBase):
             data = json.loads(text)
             results = []
             for item in data:
-                title  = item.get("title", "Unknown")
+                title  = self.clean_title(item.get("title", "Unknown"))
                 href   = self.fix_url(item.get("url", ""))
                 poster = self._extract_img_src(item.get("image", ""))
 
                 results.append(SearchResult(
-                    title  = self.clean_title(title),
+                    title  = title,
                     url    = href,
                     poster = poster
                 ))
             return results
-        except:
+        except Exception:
             return []
 
     async def load_item(self, url: str) -> MovieInfo | SeriesInfo:
@@ -86,6 +86,8 @@ class Coflix(PluginBase):
             title = title.split(" En ")[0].strip()
         else:
             title = secici.select_text("h1") or "Unknown"
+
+        title = self.clean_title(title)
 
         poster = self.fix_url(secici.select_attr("img.TPostBg", "src") or self._extract_img_src(str(secici.select_first("div.title-img img"))))
 
@@ -126,13 +128,13 @@ class Coflix(PluginBase):
                             url     = self.fix_url(e_url),
                             poster  = e_poster
                         ))
-                except:
+                except Exception:
                     continue
 
             return SeriesInfo(
                 url         = url,
                 poster      = poster,
-                title       = self.clean_title(title),
+                title       = title,
                 description = desc,
                 tags        = tags,
                 rating      = rating,
@@ -145,7 +147,7 @@ class Coflix(PluginBase):
             return MovieInfo(
                 url         = url,
                 poster      = poster,
-                title       = self.clean_title(title),
+                title       = title,
                 description = desc,
                 tags        = tags,
                 rating      = rating,
@@ -170,14 +172,14 @@ class Coflix(PluginBase):
 
         decoded_urls = []
         for li in if_secici.select("li[onclick]"):
-            onclick = if_secici.select_attr(None, "onclick", element=li)
+            onclick = li.select_attr(None, "onclick")
             if "showVideo('" in onclick:
                 encoded = re.search(r"showVideo\('([^']+)'", onclick)
                 if encoded:
                     try:
                         decoded_url = base64.b64decode(encoded.group(1)).decode()
                         decoded_urls.append(self.fix_url(decoded_url))
-                    except:
+                    except Exception:
                         pass
 
         results = []
@@ -193,7 +195,7 @@ class Coflix(PluginBase):
         for ext in extract_results:
             if isinstance(ext, BaseException) or ext is None:
                 continue
-            results.extend(ext if isinstance(ext, list) else [ext])
+            self.collect_results(results, ext)
 
         return results
 

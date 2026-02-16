@@ -20,14 +20,14 @@ class DDizi(PluginBase):
     async def get_articles(self, secici: HTMLHelper) -> list[dict]:
         articles = []
         for veri in secici.select("div.dizi-boxpost-cat, div.dizi-boxpost"):
-            title = secici.select_text("a", veri)
-            href  = secici.select_attr("a", "href", veri)
-            img   = secici.select_first("img.img-back, img.img-back-cat", veri)
+            title = veri.select_text("a")
+            href  = veri.select_attr("a", "href")
+            img   = veri.select_first("img.img-back, img.img-back-cat")
             poster = img.attrs.get("data-src") or img.attrs.get("src") if img else None
 
             if title and href:
                 articles.append({
-                    "title" : self.clean_title(title),
+                    "title" : title,
                     "url"   : self.fix_url(href),
                     "poster": self.fix_url(poster),
                 })
@@ -62,10 +62,12 @@ class DDizi(PluginBase):
         istek  = await self.httpx.get(url)
         secici = HTMLHelper(istek.text)
 
-        title       = self.clean_title(secici.select_text("h1, h2, div.dizi-boxpost-cat a"))
+        title       = secici.select_text("h1, h2, div.dizi-boxpost-cat a")
         poster      = secici.select_poster("div.afis img, img.afis, img.img-back, img.img-back-cat")
         description = secici.select_text("div.dizi-aciklama, div.aciklama, p")
-        rating      = secici.select_text("span.comments-ss")
+
+        # DDizi'de doğru bir rating verisi yok
+        # span.comments-ss yorum sayısı içeriyor, rating değil
 
         # Meta verileri (DDizi'de pek yok ama deniyoruz)
         # Year için sadece açıklama kısmına bakalım ki URL'deki ID'yi almasın
@@ -120,7 +122,7 @@ class DDizi(PluginBase):
             poster      = self.fix_url(poster),
             title       = title,
             description = description,
-            rating      = rating.strip() if rating else None,
+            rating      = None,
             year        = year,
             actors      = actors,
             episodes    = episodes
@@ -156,10 +158,7 @@ class DDizi(PluginBase):
                     else:
                         res = await self.extract(src, referer=og_video)
                         if res:
-                            if isinstance(res, list):
-                                results.extend(res)
-                            else:
-                                results.append(res)
+                            self.collect_results(results, res)
 
                 # Fallback to direct extraction if nothing found but we have og_video
                 if not results:
@@ -173,9 +172,6 @@ class DDizi(PluginBase):
                     else:
                         res = await self.extract(og_video)
                         if res:
-                            if isinstance(res, list):
-                                results.extend(res)
-                            else:
-                                results.append(res)
+                            self.collect_results(results, res)
 
         return results

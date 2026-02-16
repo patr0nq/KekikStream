@@ -1,13 +1,12 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
-from KekikStream.Core import ExtractorBase, ExtractResult, Subtitle, HTMLHelper
-from Kekik.Sifreleme  import Packer
-from contextlib       import suppress
+from KekikStream.Core import PackedJSExtractor, ExtractResult, HTMLHelper, M3U8_FILE_REGEX
 import re
 
-class VidHide(ExtractorBase):
-    name     = "VidHide"
-    main_url = "https://vidhidepro.com"
+class VidHide(PackedJSExtractor):
+    name        = "VidHide"
+    main_url    = "https://vidhidepro.com"
+    url_pattern = M3U8_FILE_REGEX
 
     # Birden fazla domain destekle
     supported_domains = [
@@ -64,32 +63,28 @@ class VidHide(ExtractorBase):
             istek = await self.httpx.get(target_url, headers={"Referer": embed_url}, follow_redirects=True)
             text  = istek.text
 
-        sel       = HTMLHelper(text)
+        sel = HTMLHelper(text)
 
-        unpacked = ""
-        # Eval script bul
-        if eval_match := sel.regex_first(r'(eval\s*\(\s*function[\s\S]+?)<\/script>'):
-            with suppress(Exception):
-                unpacked = Packer.unpack(eval_match)
-                if "var links" in unpacked:
-                     unpacked = unpacked.split("var links")[1]
+        # Packed JS'den m3u8 çıkarmayı dene (unpack_and_find helper)
+        m3u8_url = self.unpack_and_find(text)
 
-        content  = unpacked or text
-
-        # Kotlin Exact Regex: :\s*"(.*?m3u8.*?)"
-        m3u8_matches = re.findall(r':\s*["\']([^"\']+\.m3u8[^"\']*)["\']', content)
+        # Çoklu m3u8 sonucu olabilir (regex ile tüm m3u8'leri bul)
+        if not m3u8_url:
+            m3u8_matches = re.findall(r':\s*["\']([^"\']+\.m3u8[^"\']*)["\']', text)
+        else:
+            m3u8_matches = [m3u8_url]
 
         results = []
-        for m3u8_url in m3u8_matches:
+        for m3u8 in m3u8_matches:
             results.append(ExtractResult(
                 name       = name,
-                url        = self.fix_url(m3u8_url),
+                url        = self.fix_url(m3u8),
                 referer    = f"{base_url}/",
                 user_agent = self.httpx.headers.get("User-Agent", "")
             ))
 
         if not results:
-            # Fallback for non-m3u8 or different patterns
+            # Fallback: sources pattern
             if m3u8_url := sel.regex_first(r'sources:\s*\[\s*\{\s*file:\s*"([^"]+)"'):
                 results.append(ExtractResult(
                     name       = name,

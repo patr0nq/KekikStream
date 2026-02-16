@@ -30,12 +30,12 @@ class UgurFilm(PluginBase):
         results = []
         for veri in secici.select("div.icerik div"):
             # Title is in the second span (a.baslik > span), not the first span (class="sol" which is empty)
-            title = secici.select_text("a.baslik span", veri)
+            title = veri.select_text("a.baslik span")
             if not title:
                 continue
 
-            href   = secici.select_attr("a", "href", veri)
-            poster = secici.select_attr("img", "src", veri)
+            href   = veri.select_attr("a", "href")
+            poster = veri.select_attr("img", "src")
 
             results.append(MainPageResult(
                 category = category,
@@ -52,9 +52,9 @@ class UgurFilm(PluginBase):
 
         results = []
         for film in secici.select("div.icerik div"):
-            title  = secici.select_text("a.baslik span", film)
-            href   = secici.select_attr("a", "href", film)
-            poster = secici.select_attr("img", "src", film)
+            title  = film.select_text("a.baslik span")
+            href   = film.select_attr("a", "href")
+            poster = film.select_attr("img", "src")
 
             if title and href:
                 results.append(SearchResult(
@@ -111,7 +111,9 @@ class UgurFilm(PluginBase):
                     if not data:
                         return []
 
-                    return data if isinstance(data, list) else [data]
+                    results = []
+                    self.collect_results(results, data)
+                    return results
 
             return []
 
@@ -134,7 +136,9 @@ class UgurFilm(PluginBase):
                     if not data:
                         return []
 
-                    return data if isinstance(data, list) else [data]
+                    results = []
+                    self.collect_results(results, data)
+                    return results
 
                 # İç kaynaklı ise 3 alternatif için paralel istek at
                 vid = iframe.split("vid=")[-1]
@@ -157,11 +161,4 @@ class UgurFilm(PluginBase):
             results.extend(group)
 
         # Duplicate Temizliği
-        unique_results = []
-        seen = set()
-        for res in results:
-            if res.url and res.url not in seen:
-                unique_results.append(res)
-                seen.add(res.url)
-
-        return unique_results
+        return self.deduplicate(results)

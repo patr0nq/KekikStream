@@ -48,7 +48,7 @@ class JetFilmizle(PluginBase):
 
         results = []
         for veri in secici.select("div.film-card"):
-            link_tag = secici.select_first("h2.card-title a", veri) or secici.select_first("a.text-decoration-none", veri)
+            link_tag = veri.select_first("h2.card-title a") or veri.select_first("a.text-decoration-none")
             if not link_tag:
                 continue
 
@@ -58,12 +58,12 @@ class JetFilmizle(PluginBase):
 
             href = link_tag.attrs.get("href")
 
-            img_tag = secici.select_first("img.card-img-top", veri)
+            img_tag = veri.select_first("img.card-img-top")
             poster  = img_tag.attrs.get("src") or img_tag.attrs.get("data-src") if img_tag else None
 
             results.append(MainPageResult(
                 category = category,
-                title    = self.clean_title(title),
+                title    = title,
                 url      = self.fix_url(href),
                 poster   = self.fix_url(poster)
             ))
@@ -83,13 +83,13 @@ class JetFilmizle(PluginBase):
 
         try:
             data = istek.json()
-        except:
+        except Exception:
             return []
 
         results = []
         for item in data.get("results", []):
             results.append(SearchResult(
-                title  = self.clean_title(item.get("title")),
+                title  = item.get("title"),
                 url    = self.fix_url(item.get("url")),
                 poster = self.fix_url(item.get("poster"))
             ))
@@ -100,7 +100,7 @@ class JetFilmizle(PluginBase):
         istek  = await self.httpx.get(url)
         secici = HTMLHelper(istek.text)
 
-        title       = self.clean_title(secici.select_text("h1"))
+        title       = secici.select_text("h1")
         poster      = secici.select_poster("div.film-poster-container img") or secici.select_poster("div.film-poster img")
 
         # Metadata Extraction (Specific Selectors from Debug)
@@ -126,7 +126,7 @@ class JetFilmizle(PluginBase):
         source_groups = secici.select("div.player-sources-group")
         for group in source_groups:
             p_group = group.attrs.get("data-player-group")
-            for btn in secici.select("button.player-source-btn", group):
+            for btn in group.select("button.player-source-btn"):
                 label   = btn.text(strip=True)
                 s_index = btn.attrs.get("data-source-index")
 
@@ -236,9 +236,6 @@ class JetFilmizle(PluginBase):
                     prefix = f"[{p_type.upper()}] {label}"
                     data = await self.extract(src, prefix=prefix)
                     if data:
-                        if isinstance(data, list):
-                            response.extend(data)
-                        else:
-                            response.append(data)
+                        self.collect_results(response, data)
 
         return response

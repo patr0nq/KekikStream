@@ -4,6 +4,12 @@ from KekikStream.Core import PluginBase, MainPageResult, SearchResult, MovieInfo
 from json             import dumps, loads
 import re, contextlib
 
+def _decode_unicode(text: str | None) -> str | None:
+    """API'den gelen backslash'sız unicode escape'leri çözer (ör. u00c7 → Ç)."""
+    if not isinstance(text, str):
+        return text
+    return re.sub(r'(?<![\\])u([0-9a-fA-F]{4})', lambda m: chr(int(m.group(1), 16)), text)
+
 class RecTV(PluginBase):
     name        = "RecTV"
     language    = "tr"
@@ -38,7 +44,7 @@ class RecTV(PluginBase):
         return [
             MainPageResult(
                 category = category,
-                title    = self.clean_title(veri.get("title")),
+                title    = veri.get("title"),
                 url      = dumps(veri),
                 poster   = self.fix_url(veri.get("image")),
             )
@@ -81,8 +87,8 @@ class RecTV(PluginBase):
         common_info = {
             "url"         : url,
             "poster"      : self.fix_url(veri.get("image")),
-            "title"       : veri.get("title"),
-            "description" : veri.get("description"),
+            "title"       : _decode_unicode(veri.get("title")),
+            "description" : _decode_unicode(veri.get("description")),
             "tags"        : [genre.get("title") for genre in veri.get("genres")] if veri.get("genres") else [],
             "rating"      : str(veri.get("imdb") or veri.get("rating") or ""),
             "year"        : str(veri.get("year") or ""),
@@ -131,7 +137,7 @@ class RecTV(PluginBase):
         if veri.get("is_episode"):
             return [ExtractResult(
                 url        = veri.get("url"),
-                name       = veri.get("title", "Bölüm"),
+                name       = _decode_unicode(veri.get("title", "Bölüm")),
                 user_agent = "googleusercontent",
                 referer    = "https://twitter.com/"
             )]
@@ -146,7 +152,7 @@ class RecTV(PluginBase):
 
                 results.append(ExtractResult(
                     url        = video_link,
-                    name       = f"{veri.get('title')} - {kaynak.get('title')}",
+                    name       = _decode_unicode(f"{veri.get('title')} - {kaynak.get('title')}"),
                     user_agent = "googleusercontent",
                     referer    = "https://twitter.com/"
                 ))

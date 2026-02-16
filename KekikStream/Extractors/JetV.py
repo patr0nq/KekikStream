@@ -28,7 +28,7 @@ class JetV(ExtractorBase):
 
         try:
             sources = json.loads(clean_json)
-        except:
+        except Exception:
             # Basit parser yetmediyse, manuel parse deneyelim (tek kaynak varsa)
             file_url = HTMLHelper(sources_str).regex_first(r'file["\']?:\s*["\']([^"\']+)["\']')
             label    = HTMLHelper(sources_str).regex_first(r'label["\']?:\s*["\']([^"\']+)["\']')

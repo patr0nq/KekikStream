@@ -27,9 +27,9 @@ class YabanciDizi(PluginBase):
 
         results = []
         for item in secici.select("li.mb-lg, li.segment-poster"):
-            title  = secici.select_text("h2", item)
-            href   = secici.select_attr("a", "href", item)
-            poster = secici.select_attr("img", "src", item)
+            title  = item.select_text("h2")
+            href   = item.select_attr("a", "href")
+            poster = item.select_attr("img", "src")
 
             if title and href:
                 results.append(MainPageResult(
@@ -110,10 +110,10 @@ class YabanciDizi(PluginBase):
 
         episodes = []
         for bolum in secici.select("div.episodes-list div.ui td:has(h6)"):
-            link = secici.select_first("a", bolum)
+            link = bolum.select_first("a")
             if link:
                 href = link.attrs.get("href")
-                name = secici.select_text("h6", bolum) or link.text(strip=True)
+                name = bolum.select_text("h6") or link.text(strip=True)
                 s, e = secici.extract_season_episode(href)
                 episodes.append(Episode(
                     season  = s or 1,
@@ -128,10 +128,8 @@ class YabanciDizi(PluginBase):
         return SeriesInfo(**common_info, episodes=episodes)
 
     async def load_links(self, url: str) -> list[ExtractResult]:
-        loop = asyncio.get_event_loop()
-
         # 1. Ana sayfayı çek
-        istek = await loop.run_in_executor(None, lambda: self.cloudscraper.get(url, headers={"Referer": f"{self.main_url}/"}))
+        istek = await self.async_cf_get(url, headers={"Referer": f"{self.main_url}/"})
         secici = HTMLHelper(istek.text)
 
         results = []
@@ -149,7 +147,7 @@ class YabanciDizi(PluginBase):
             dil_adi = "Dublaj" if data_type == "2" else "Altyazı"
 
             try:
-                post_resp = await loop.run_in_executor(None, lambda: self.cloudscraper.post(
+                post_resp = await self.async_cf_post(
                     url     = f"{self.main_url}/ajax/service",
                     headers = {
                         "X-Requested-With" : "XMLHttpRequest",
@@ -161,7 +159,7 @@ class YabanciDizi(PluginBase):
                         "type"    : "langTab"
                     },
                     cookies = {"udys": str(timestamp_ms)}
-                ))
+                )
 
                 res_json = post_resp.json()
                 if not res_json.get("data"):
@@ -199,11 +197,11 @@ class YabanciDizi(PluginBase):
                 for src in sources:
                     try:
                         # API sayfasını çekip içindeki iframe'i bulalım
-                        api_resp = await loop.run_in_executor(None, lambda: self.cloudscraper.get(
+                        api_resp = await self.async_cf_get(
                             src["api_url"],
                             headers={"Referer": f"{self.main_url}/"},
                             cookies={"udys": str(timestamp_ms)}
-                        ))
+                        )
 
                         api_sel = HTMLHelper(api_resp.text)
                         iframe  = api_sel.select_attr("iframe", "src")
@@ -211,11 +209,11 @@ class YabanciDizi(PluginBase):
                         if not iframe and "drive" in src["api_url"]:
                             t_sec = int(time.time())
                             drives_url = f"{src['api_url'].replace('/api/drive/', '/api/drives/')}?t={t_sec}"
-                            api_resp = await loop.run_in_executor(None, lambda: self.cloudscraper.get(
+                            api_resp = await self.async_cf_get(
                                 drives_url,
                                 headers={"Referer": src["api_url"]},
                                 cookies={"udys": str(timestamp_ms)}
-                            ))
+                            )
                             api_sel = HTMLHelper(api_resp.text)
                             iframe  = api_sel.select_attr("iframe", "src")
 
@@ -223,7 +221,7 @@ class YabanciDizi(PluginBase):
                             prefix = f"{src['dil']} | {src['name']}"
                             extracted = await self.extract(self.fix_url(iframe), prefix=prefix)
                             if extracted:
-                                tab_results.extend(extracted if isinstance(extracted, list) else [extracted])
+                                self.collect_results(tab_results, extracted)
                     except Exception:
                         continue
                 return tab_results
@@ -241,14 +239,7 @@ class YabanciDizi(PluginBase):
             if iframe:
                 extracted = await self.extract(self.fix_url(iframe), name_override="Main")
                 if extracted:
-                    results.extend(extracted if isinstance(extracted, list) else [extracted])
+                    self.collect_results(results, extracted)
 
         # Duplicate kontrolü
-        unique_results = []
-        seen = set()
-        for res in results:
-            if res.url and res.url not in seen:
-                unique_results.append(res)
-                seen.add(res.url)
-
-        return unique_results
+        return self.deduplicate(results)

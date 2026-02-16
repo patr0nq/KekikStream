@@ -1,12 +1,11 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
-from KekikStream.Core import ExtractorBase, ExtractResult, HTMLHelper
-from Kekik.Sifreleme  import Packer
-from contextlib       import suppress
+from KekikStream.Core import PackedJSExtractor, ExtractResult, M3U8_FILE_REGEX
 
-class StreamWish(ExtractorBase):
-    name     = "StreamWish"
-    main_url = "https://streamwish.to"
+class StreamWish(PackedJSExtractor):
+    name        = "StreamWish"
+    main_url    = "https://streamwish.to"
+    url_pattern = M3U8_FILE_REGEX
 
     supported_domains = [
         "streamwish.to", "streamwish.site", "streamwish.xyz", "streamwish.com",
@@ -40,32 +39,8 @@ class StreamWish(ExtractorBase):
             },
             follow_redirects=True
         )
-        text = istek.text
 
-        unpacked = ""
-        # Eval script bul
-        if eval_match := HTMLHelper(text).regex_first(r'(eval\s*\(\s*function[\s\S]+?)<\/script>'):
-            with suppress(Exception):
-                unpacked = Packer.unpack(eval_match)
-
-        content = unpacked or text
-        sel = HTMLHelper(content)
-
-        # Regex: file:\s*"(.*?m3u8.*?)"
-        m3u8_url = sel.regex_first(r'file\s*:\s*["\']([^"\']+\.m3u8[^"\']*)["\']')
-
-        if not m3u8_url:
-            # Fallback to sources: Kotlin mantığı
-            m3u8_url = sel.regex_first(r'sources\s*:\s*\[\s*{\s*file\s*:\s*["\']([^"\']+)["\']')
-
-        if not m3u8_url:
-            # p,a,c,k,e,d içinde olabilir
-            m3u8_url = sel.regex_first(r'["\'](https?://[^"\']+\.m3u8[^"\']*)["\']')
-
-        if not m3u8_url:
-            # t.r.u.e pattern fallback
-            m3u8_url = sel.regex_first(r'file\s*:\s*["\']([^"\']+)["\']')
-
+        m3u8_url = self.unpack_and_find(istek.text)
         if not m3u8_url:
             raise ValueError(f"StreamWish: m3u8 bulunamadı. {url}")
 

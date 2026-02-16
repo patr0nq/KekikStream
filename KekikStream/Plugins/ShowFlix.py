@@ -59,7 +59,7 @@ class ShowFlix(PluginBase):
             if title:
                 results.append(MainPageResult(
                     category = category,
-                    title    = self.clean_title(title),
+                    title    = title,
                     url      = href,
                     poster   = self.fix_url(poster)
                 ))
@@ -71,7 +71,7 @@ class ShowFlix(PluginBase):
         results = []
         headers = {
             "X-Parse-Application-Id": self.app_id,
-            "X-Parse-Master-Key": self.js_key
+            "X-Parse-JavaScript-Key": self.js_key
         }
 
         # Determine search criteria
@@ -101,7 +101,7 @@ class ShowFlix(PluginBase):
             data = resp.json().get("results", [])
             for item in data:
                 results.append(SearchResult(
-                    title  = self.clean_title(item.get("name")),
+                    title  = item.get("name"),
                     url    = f"{self.main_url}/detail/{item_type}/{item.get('objectId')}",
                     poster = self.fix_url(item.get("posterURL") or item.get("image"))
                 ))
@@ -207,24 +207,10 @@ class ShowFlix(PluginBase):
                 if val := data.get(key):
                     res = await self.extract(template.format(val))
                     if res:
-                        if isinstance(res, list):
-                            results.extend(res)
-                        else:
-                            results.append(res)
+                        self.collect_results(results, res)
 
             if val := data.get("original"):
                  results.append(ExtractResult(name="ShowFlix (Original)", url=val, referer=self.main_url))
-
-            # Alt yazıları senkronize et
-            all_subs = {}
-            for res in results:
-                for sub in res.subtitles:
-                    if sub.name not in all_subs:
-                        all_subs[sub.name] = sub
-
-            unique_subs = list(all_subs.values())
-            for res in results:
-                res.subtitles = unique_subs
 
             return results
 
@@ -248,23 +234,9 @@ class ShowFlix(PluginBase):
             if val := embeds.get(key):
                 res = await self.extract(template.format(val))
                 if res:
-                    if isinstance(res, list):
-                        results.extend(res)
-                    else:
-                        results.append(res)
+                    self.collect_results(results, res)
 
         if val := item.get("originalURL"):
              results.append(ExtractResult(name="ShowFlix (Original)", url=val, referer=self.main_url))
-
-        # Alt yazıları senkronize et
-        all_subs = {}
-        for res in results:
-            for sub in res.subtitles:
-                if sub.name not in all_subs:
-                    all_subs[sub.name] = sub
-
-        unique_subs = list(all_subs.values())
-        for res in results:
-            res.subtitles = unique_subs
 
         return results

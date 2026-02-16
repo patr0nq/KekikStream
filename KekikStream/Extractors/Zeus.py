@@ -20,14 +20,14 @@ class Zeus(ExtractorBase):
 
         # API'ye POST at
         resp = await self.httpx.post(
-            url     = "https://d2rs.com/zeus/api.php",
+            url     = f"{self.main_url}/zeus/api.php",
             data    = {"q": q_param},
             headers = {"Referer": url}
         )
 
         try:
             sources = resp.json()
-        except:
+        except Exception:
              raise ValueError("Zeus: API yanıtı geçersiz JSON")
 
         results = []
@@ -40,7 +40,7 @@ class Zeus(ExtractorBase):
             if not file_path:
                 continue
 
-            full_url = f"https://d2rs.com/zeus/{file_path}"
+            full_url = f"{self.main_url}/zeus/{file_path}"
 
             # İsimlendirme
             if label:

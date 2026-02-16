@@ -57,9 +57,9 @@ class HDFilmCehennemi(PluginBase):
 
         results = []
         for veri in secici.select("div.section-content a.poster"):
-            title  = secici.select_text("strong.poster-title", veri)
+            title  = veri.select_text("strong.poster-title")
             href   = veri.attrs.get("href")
-            poster = secici.select_attr("img", "data-src", veri)
+            poster = veri.select_attr("img", "data-src")
 
             if title and href:
                 results.append(MainPageResult(
@@ -101,7 +101,7 @@ class HDFilmCehennemi(PluginBase):
         istek  = await self.httpx.get(url, headers = {"Referer": f"{self.main_url}/"})
         secici = HTMLHelper(istek.text)
 
-        title       = self.clean_title(secici.select_text("h1.section-title"))
+        title       = secici.select_text("h1.section-title")
         poster      = secici.select_poster("aside.post-info-poster img.lazyload")
         description = secici.select_text("article.post-info-content > p")
         tags        = secici.select_texts("div.post-info-genres a")
@@ -117,7 +117,7 @@ class HDFilmCehennemi(PluginBase):
         if ep_links:
             episodes = []
             for ep in ep_links:
-                name = secici.select_text("h4", ep)
+                name = ep.select_text("h4")
                 href = ep.attrs.get("href")
                 if name and href:
                     s, e = secici.extract_season_episode(name)
@@ -303,7 +303,7 @@ class HDFilmCehennemi(PluginBase):
                 json_data    = api_get.json()
                 html_content = json_data.get("data", {}).get("html", "")
                 iframe       = HTMLHelper(html_content).select_attr("iframe", "data-src")
-            except:
+            except Exception:
                 # RegEx fallback
                 iframe = HTMLHelper(api_get.text).regex_first(r'data-src=\\\"([^\"]+)')
                 iframe = iframe.replace("\\", "") if iframe else None
@@ -342,7 +342,7 @@ class HDFilmCehennemi(PluginBase):
                     else:
                         lang_code = lang_text
 
-            for link in secici.select("button.alternative-link", alternatif):
+            for link in alternatif.select("button.alternative-link"):
                 source_text = link.text(strip=True).replace('(HDrip Xbet)', '').strip()
                 source_name = f"{lang_code} | {source_text}".strip()
                 video_id    = link.attrs.get("data-video")

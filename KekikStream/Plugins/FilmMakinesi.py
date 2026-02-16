@@ -34,14 +34,14 @@ class FilmMakinesi(PluginBase):
     }
 
     async def get_main_page(self, page: int, url: str, category: str) -> list[MainPageResult]:
-        istek  = self.cloudscraper.get(f"{url}{'' if page == 1 else f'page/{page}/'}")
+        istek  = await self.async_cf_get(f"{url}{'' if page == 1 else f'page/{page}/'}")
         secici = HTMLHelper(istek.text)
 
         results = []
         for veri in secici.select("div.item-relative"):
-            title  = secici.select_text("div.title", veri)
-            href   = secici.select_attr("a", "href", veri)
-            poster = secici.select_poster("img", veri)
+            title  = veri.select_text("div.title")
+            href   = veri.select_attr("a", "href")
+            poster = veri.select_poster("img")
 
             if title and href:
                 results.append(MainPageResult(
@@ -59,9 +59,9 @@ class FilmMakinesi(PluginBase):
 
         results = []
         for article in secici.select("div.item-relative"):
-            title  = secici.select_text("div.title", article)
-            href   = secici.select_attr("a", "href", article)
-            poster = secici.select_poster("img", article)
+            title  = article.select_text("div.title")
+            href   = article.select_attr("a", "href")
+            poster = article.select_poster("img")
 
             if title and href:
                 results.append(SearchResult(
@@ -76,7 +76,7 @@ class FilmMakinesi(PluginBase):
         istek  = await self.httpx.get(url)
         secici = HTMLHelper(istek.text)
 
-        title       = self.clean_title(secici.select_text("h1.title"))
+        title       = secici.select_text("h1.title")
         poster      = secici.select_poster("img.cover-img")
         description = secici.select_text("div.info-description")
         rating      = secici.select_text("div.info div.imdb b")
@@ -137,8 +137,7 @@ class FilmMakinesi(PluginBase):
         istek  = await self.httpx.get(url)
         secici = HTMLHelper(istek.text)
 
-        response    = []
-        shared_subs = []
+        response = []
 
         # Video parts linklerini ve etiketlerini al
         for link in secici.select("div.video-parts a[data-video_url]"):
@@ -147,46 +146,13 @@ class FilmMakinesi(PluginBase):
 
             if video_url:
                 data = await self.extract(video_url, prefix=label.split()[0] if label else None)
-                if data:
-                    if isinstance(data, list):
-                        for d in data:
-                            response.append(d)
-                            if d.subtitles:
-                                shared_subs.extend(d.subtitles)
-                    else:
-                        response.append(data)
-                        if data.subtitles:
-                            shared_subs.extend(data.subtitles)
+                self.collect_results(response, data)
 
         # Eğer video-parts yoksa iframe kullan
         if not response:
             iframe_src = secici.select_attr("iframe", "data-src")
             if iframe_src:
                 data = await self.extract(iframe_src)
-                if data:
-                    if isinstance(data, list):
-                        for d in data:
-                            response.append(d)
-                            if d.subtitles:
-                                shared_subs.extend(d.subtitles)
-                    else:
-                        response.append(data)
-                        if data.subtitles:
-                            shared_subs.extend(data.subtitles)
-
-        # Altyazıları Dağıt
-        if shared_subs:
-            unique_subs = []
-            seen_urls   = set()
-            for sub in shared_subs:
-                if sub.url not in seen_urls:
-                    seen_urls.add(sub.url)
-                    unique_subs.append(sub)
-
-            for res in response:
-                current_urls = {s.url for s in res.subtitles}
-                for sub in unique_subs:
-                    if sub.url not in current_urls:
-                        res.subtitles.append(sub)
+                self.collect_results(response, data)
 
         return response

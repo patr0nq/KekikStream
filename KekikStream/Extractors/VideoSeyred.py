@@ -1,7 +1,6 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
 from KekikStream.Core import ExtractorBase, ExtractResult, Subtitle, HTMLHelper
-import json
 
 class VideoSeyred(ExtractorBase):
     name     = "VideoSeyred"

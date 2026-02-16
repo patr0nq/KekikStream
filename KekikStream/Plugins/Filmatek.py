@@ -31,13 +31,13 @@ class Filmatek(PluginBase):
 
         results = []
         for item in secici.select("div.items article, #archive-content article"):
-            title_el = secici.select_first("div.data h3 a, h3 a", item)
+            title_el = item.select_first("div.data h3 a, h3 a")
             if not title_el:
                 continue
 
             title  = title_el.text(strip=True)
             href   = self.fix_url(title_el.attrs.get("href"))
-            poster = self.fix_url(secici.select_poster("img", item))
+            poster = self.fix_url(item.select_poster("img"))
 
             results.append(MainPageResult(
                 category = category,
@@ -54,13 +54,13 @@ class Filmatek(PluginBase):
 
         results = []
         for item in secici.select("div.result-item"):
-            title_el = secici.select_first("div.title a", item)
+            title_el = item.select_first("div.title a")
             if not title_el:
                 continue
 
             title  = title_el.text(strip=True)
             href   = self.fix_url(title_el.attrs.get("href"))
-            poster = self.fix_url(secici.select_poster("div.image img", item))
+            poster = self.fix_url(item.select_poster("div.image img"))
 
             results.append(SearchResult(
                 title  = title,
@@ -74,7 +74,7 @@ class Filmatek(PluginBase):
         istek  = await self.httpx.get(url)
         secici = HTMLHelper(istek.text)
 
-        title       = self.clean_title(secici.select_text("div.data h1, h1"))
+        title       = secici.select_text("div.data h1, h1")
         poster      = secici.select_poster("div.poster img") or secici.select_attr("meta[property='og:image']", "content")
         description = secici.select_text("div.wp-content p") or secici.select_attr("meta[property='og:description']", "content")
         year        = secici.extract_year("span.date")
@@ -120,7 +120,7 @@ class Filmatek(PluginBase):
                 post_id = opt.attrs.get("data-post")
                 nume    = opt.attrs.get("data-nume")
                 type_   = opt.attrs.get("data-type")
-                title   = secici.select_text("span.title", opt)
+                title   = opt.select_text("span.title")
 
             if not post_id or not nume:
                 continue
@@ -167,10 +167,7 @@ class Filmatek(PluginBase):
                     else:
                         extracted = await self.extract(iframe_url, prefix=title)
                         if extracted:
-                            if isinstance(extracted, list):
-                                results.extend(extracted)
-                            else:
-                                results.append(extracted)
+                            self.collect_results(results, extracted)
                         else:
                             results.append(ExtractResult(
                                 name    = f"{title} | External",

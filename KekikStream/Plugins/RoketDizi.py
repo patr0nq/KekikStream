@@ -27,14 +27,14 @@ class RoketDizi(PluginBase):
 
         results = []
         for item in secici.select("div.new-added-list > span"):
-            title  = secici.select_text("span.line-clamp-1", item)
-            href   = secici.select_attr("a", "href", item)
-            poster = secici.select_attr("img", "src", item)
+            title  = item.select_text("span.line-clamp-1")
+            href   = item.select_attr("a", "href")
+            poster = item.select_attr("img", "src")
 
             if title and href:
                 results.append(MainPageResult(
                     category = category,
-                    title    = self.clean_title(title),
+                    title    = title,
                     url      = self.fix_url(href),
                     poster   = self.fix_url(poster)
                 ))
@@ -72,7 +72,7 @@ class RoketDizi(PluginBase):
 
                 if title and slug:
                     results.append(SearchResult(
-                        title  = self.clean_title(title.strip()),
+                        title  = title.strip(),
                         url    = self.fix_url(f"{self.main_url}/{slug}"),
                         poster = self.fix_url(poster)
                     ))
@@ -95,8 +95,8 @@ class RoketDizi(PluginBase):
             secure_data_raw = next_data["props"]["pageProps"]["secureData"]
             secure_data     = json.loads(base64.b64decode(secure_data_raw).decode('utf-8'))
 
-            content_item = secure_data.get("contentItem", {})
-            content      = secure_data.get("content", {}).get("result", {})
+            content_item    = secure_data.get("contentItem", {})
+            related_results = secure_data.get("RelatedResults", {})
 
             title       = content_item.get("original_title") or content_item.get("culture_title")
             poster      = content_item.get("poster_url") or content_item.get("face_url")
@@ -106,12 +106,13 @@ class RoketDizi(PluginBase):
             tags        = content_item.get("categories", "").split(",")
 
             actors = []
-            casts_data = content.get("getSerieCastsById") or content.get("getMovieCastsById")
-            if casts_data and casts_data.get("result"):
+            casts_data = related_results.get("getSerieCastsById") or related_results.get("getMovieCastsById") or related_results.get("getMovieSeriesPopularCasts")
+            if casts_data and isinstance(casts_data, dict) and casts_data.get("result"):
                 actors = [cast.get("name") for cast in casts_data["result"] if cast.get("name")]
 
+            content_result = secure_data.get("content", {}).get("result", {})
             episodes = []
-            if "Series" in str(content.get("FindedType")):
+            if "Series" in str(content_result.get("FindedType")):
                 all_urls = HTMLHelper(resp.text).regex_all(r'"url":"([^"]*)"')
                 episodes_dict = {}
                 for u in all_urls:
@@ -131,7 +132,7 @@ class RoketDizi(PluginBase):
                 return SeriesInfo(
                     url         = url,
                     poster      = self.fix_url(poster),
-                    title       = self.clean_title(title),
+                    title       = title,
                     description = description,
                     tags        = tags,
                     rating      = rating,
@@ -143,7 +144,7 @@ class RoketDizi(PluginBase):
                 return MovieInfo(
                     url         = url,
                     poster      = self.fix_url(poster),
-                    title       = self.clean_title(title),
+                    title       = title,
                     description = description,
                     tags        = tags,
                     rating      = rating,
@@ -155,7 +156,7 @@ class RoketDizi(PluginBase):
             # Fallback to simple extraction if JSON parsing fails
             return SeriesInfo(
                 url   = url,
-                title = self.clean_title(sel.select_text("h1")) or "Bilinmeyen"
+                title = sel.select_text("h1") or "Bilinmeyen"
             )
 
     async def load_links(self, url: str) -> list[ExtractResult]:
@@ -199,8 +200,7 @@ class RoketDizi(PluginBase):
 
                 # Extract with helper
                 data = await self.extract(iframe_url)
-                if data:
-                    results.append(data)
+                self.collect_results(results, data)
 
             return results
 

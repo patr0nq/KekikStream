@@ -42,12 +42,12 @@ class SinemaCX(PluginBase):
 
         results = []
         for veri in secici.select("div.son div.frag-k, div.icerik div.frag-k"):
-            title = secici.select_text("div.yanac span", veri)
+            title = veri.select_text("div.yanac span")
             if not title:
                 continue
 
-            href   = secici.select_attr("div.yanac a", "href", veri)
-            poster = secici.select_attr("a.resim img", "data-src", veri) or secici.select_attr("a.resim img", "src", veri)
+            href   = veri.select_attr("div.yanac a", "href")
+            poster = veri.select_attr("a.resim img", "data-src") or veri.select_attr("a.resim img", "src")
 
             results.append(MainPageResult(
                 category = category,
@@ -64,12 +64,12 @@ class SinemaCX(PluginBase):
 
         results = []
         for veri in secici.select("div.icerik div.frag-k"):
-            title = secici.select_text("div.yanac span", veri)
+            title = veri.select_text("div.yanac span")
             if not title:
                 continue
 
-            href   = secici.select_attr("div.yanac a", "href", veri)
-            poster = secici.select_attr("a.resim img", "data-src", veri) or secici.select_attr("a.resim img", "src", veri)
+            href   = veri.select_attr("div.yanac a", "href")
+            poster = veri.select_attr("a.resim img", "data-src") or veri.select_attr("a.resim img", "src")
 
             results.append(SearchResult(
                 title  = title,
@@ -175,18 +175,18 @@ class SinemaCX(PluginBase):
             for li in part_list:
                 # Aktif Tab (li.tab-aktif veya span.secili)
                 if "tab-aktif" in li.attrs.get("class", ""):
-                     if a_tag := secici.select_first("a", li):
+                     if a_tag := li.select_first("a"):
                          # Direkt text al (deep=False)
                          val  = a_tag.text(strip=True, deep=False)
                          name = val if val else "SinemaCX"
                          sources.append((None, name, False))
 
-                elif span := secici.select_first("span.secili", li):
+                elif span := li.select_first("span.secili"):
                     name = span.text(strip=True)
                     sources.append((None, name, False))
 
                 # Pasif Tab
-                elif a_tag := secici.select_first("a", li):
+                elif a_tag := li.select_first("a"):
                     href = a_tag.attrs.get("href")
                     # title varsa title, yoksa text (deep=False ile almayı dene önce)
                     name = a_tag.attrs.get("title")
@@ -234,12 +234,4 @@ class SinemaCX(PluginBase):
                 final_results.extend(group)
 
         # Duplicate Eliminasyonu
-        unique_results = []
-        seen = set()
-        for res in final_results:
-            key = (res.url, res.name)
-            if res.url and key not in seen:
-                unique_results.append(res)
-                seen.add(key)
-
-        return unique_results
+        return self.deduplicate(final_results, key="url+name")

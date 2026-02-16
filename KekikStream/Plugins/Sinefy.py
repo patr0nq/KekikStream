@@ -1,7 +1,7 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
 from KekikStream.Core import PluginBase, MainPageResult, SearchResult, SeriesInfo, Episode, MovieInfo, ExtractResult, HTMLHelper
-import json, contextlib, asyncio
+import json, contextlib, asyncio, re
 
 class Sinefy(PluginBase):
     name        = "Sinefy"
@@ -47,9 +47,9 @@ class Sinefy(PluginBase):
 
         results = []
         for item in secici.select("div.poster-with-subject, div.dark-segment div.poster-md.poster"):
-            title  = secici.select_text("h2", item)
-            href   = secici.select_attr("a", "href", item)
-            poster_attr = secici.select_attr("img", "data-srcset", item)
+            title  = item.select_text("h2")
+            href   = item.select_attr("a", "href")
+            poster_attr = item.select_attr("img", "data-srcset")
             poster = poster_attr.split(",")[0].split(" ")[0] if poster_attr else None
 
             if title and href:
@@ -161,11 +161,13 @@ class Sinefy(PluginBase):
 
         episodes = []
         for tab in secici.select("div.ui.tab"):
-            for link in secici.select("a[href*='bolum']", tab):
+            for link in tab.select("a[href*='bolum']"):
                 href = link.attrs.get("href")
                 if href:
                     s, e = secici.extract_season_episode(href)
-                    name = secici.select_text("div.content div.header", link) or link.text(strip=True)
+                    name = link.select_text("div.content div.header") or link.text(strip=True)
+                    # "Dizinin İlk Bölümünü İzle" gibi ön-ekleri temizle
+                    name = re.sub(r"Dizinin \u0130lk B\u00f6l\u00fcm\u00fcn\u00fc \u0130zle\s*", "", name).strip()
                     episodes.append(Episode(season=s or 1, episode=e or 1, title=name, url=self.fix_url(href)))
 
         if episodes:
@@ -212,14 +214,9 @@ class Sinefy(PluginBase):
             items = extracted if isinstance(extracted, list) else [extracted]
 
             # Sonuçları işle (İsim ver, altyazı ekle)
-            copy_subtitles = list(subtitles) # Her item için kopyasını kullan
             for item in items:
                 item.name = name
-                if copy_subtitles:
-                    if not item.subtitles:
-                        item.subtitles = copy_subtitles
-                    else:
-                        item.subtitles.extend(copy_subtitles)
+                item.subtitles.extend(subtitles)
 
             return items
         except Exception:
@@ -284,12 +281,4 @@ class Sinefy(PluginBase):
                 final_results.extend(group)
 
         # 4. Duplicate Temizle (URL + İsim Kombinasyonu)
-        unique_results = []
-        seen = set()
-        for res in final_results:
-            key = (res.url, res.name)
-            if res.url and key not in seen:
-                unique_results.append(res)
-                seen.add(key)
-
-        return unique_results
+        return self.deduplicate(final_results, key="url+name")

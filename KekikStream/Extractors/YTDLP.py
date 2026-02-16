@@ -2,7 +2,7 @@
 
 from KekikStream.Core import ExtractorBase, ExtractResult, Subtitle, get_ytdlp_extractors
 from urllib.parse     import urlparse
-import yt_dlp, re, sys, os
+import yt_dlp, re
 
 class YTDLP(ExtractorBase):
     name     = "yt-dlp"
@@ -119,6 +119,7 @@ class YTDLP(ExtractorBase):
         cls._FAST_DOMAIN_RE = re.compile(rf"(?:^|.*\.)(?:{joined})$", re.IGNORECASE)
 
     def __init__(self):
+        super().__init__()
         self.__class__._init_fast_domain_regex()
 
     def can_handle_url(self, url: str) -> bool:

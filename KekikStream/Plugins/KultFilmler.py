@@ -1,6 +1,6 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
-from KekikStream.Core import PluginBase, MainPageResult, SearchResult, MovieInfo, SeriesInfo, Episode, ExtractResult, Subtitle, HTMLHelper
+from KekikStream.Core import HTMLHelper, PluginBase, MainPageResult, SearchResult, MovieInfo, Episode, SeriesInfo, Subtitle, ExtractResult
 import base64, asyncio, contextlib
 
 class KultFilmler(PluginBase):
@@ -41,9 +41,9 @@ class KultFilmler(PluginBase):
 
         results = []
         for veri in secici.select("div.col-md-12 div.movie-box"):
-            title  = secici.select_attr("div.img img", "alt", veri)
-            href   = secici.select_attr("a", "href", veri)
-            poster = secici.select_attr("div.img img", "src", veri)
+            title  = veri.select_attr("div.img img", "alt")
+            href   = veri.select_attr("a", "href")
+            poster = veri.select_attr("div.img img", "src")
 
             if title and href:
                 results.append(MainPageResult(
@@ -61,9 +61,9 @@ class KultFilmler(PluginBase):
 
         results = []
         for veri in secici.select("div.movie-box"):
-            title  = secici.select_attr("div.img img", "alt", veri)
-            href   = secici.select_attr("a", "href", veri)
-            poster = secici.select_attr("div.img img", "src", veri)
+            title  = veri.select_attr("div.img img", "alt")
+            href   = veri.select_attr("a", "href")
+            poster = veri.select_attr("div.img img", "src")
 
             if title and href:
                 results.append(SearchResult(
@@ -78,7 +78,7 @@ class KultFilmler(PluginBase):
         istek  = await self.httpx.get(url)
         secici = HTMLHelper(istek.text)
 
-        title       = self.clean_title(secici.select_attr("div.film-bilgileri img", "alt") or secici.select_attr("[property='og:title']", "content"))
+        title       = secici.select_attr("div.film-bilgileri img", "alt") or secici.select_attr("[property='og:title']", "content")
         poster      = self.fix_url(secici.select_attr("[property='og:image']", "content"))
         description = secici.select_text("div.description")
         tags        = secici.select_texts("ul.post-categories a")
@@ -90,9 +90,9 @@ class KultFilmler(PluginBase):
         if "/dizi/" in url:
             episodes = []
             for bolum in secici.select("div.episode-box"):
-                href       = secici.select_attr("div.name a", "href", bolum)
-                ssn_detail = secici.select_text("span.episodetitle", bolum) or ""
-                ep_detail  = secici.select_text("span.episodetitle b", bolum) or ""
+                href       = bolum.select_attr("div.name a", "href")
+                ssn_detail = bolum.select_text("span.episodetitle") or ""
+                ep_detail  = bolum.select_text("span.episodetitle b") or ""
                 if href:
                     s, e = secici.extract_season_episode(f"{ssn_detail} {ep_detail}")
                     name = f"{ssn_detail} - {ep_detail}".strip(" -")
@@ -226,8 +226,8 @@ class KultFilmler(PluginBase):
             if not href:
                 continue
 
-            a_name     = helper.select_text("div.part-name", link) or "Alternatif"
-            a_lang     = helper.select_attr("div.part-lang span", "title", link)
+            a_name     = link.select_text("div.part-name") or "Alternatif"
+            a_lang     = link.select_attr("div.part-lang span", "title")
             full_title = f"{a_name} | {a_lang}" if a_lang else a_name
 
             alt_tasks.append(self._resolve_alt_page(self.fix_url(href), full_title))

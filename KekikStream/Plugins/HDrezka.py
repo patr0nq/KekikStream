@@ -28,13 +28,13 @@ class HDrezka(PluginBase):
 
         results = []
         for veri in secici.select("div.b-content__inline_items div.b-content__inline_item"):
-            title  = secici.select_text("div.b-content__inline_item-link > a", element=veri)
-            href   = secici.select_attr("a", "href", element=veri)
-            poster = secici.select_poster(element=veri) if hasattr(secici, 'select_poster') else secici.select_attr("img", "src", element=veri)
+            title  = veri.select_text("div.b-content__inline_item-link > a")
+            href   = veri.select_attr("a", "href")
+            poster = veri.select_poster()
 
             results.append(MainPageResult(
                 category = category,
-                title    = self.clean_title(title),
+                title    = title,
                 url      = href,
                 poster   = poster
             ))
@@ -48,12 +48,12 @@ class HDrezka(PluginBase):
 
         results = []
         for veri in secici.select("div.b-content__inline_items div.b-content__inline_item"):
-            title  = secici.select_text("div.b-content__inline_item-link > a", element=veri)
-            href   = secici.select_attr("a", "href", element=veri)
-            poster = secici.select_poster(element=veri) if hasattr(secici, 'select_poster') else secici.select_attr("img", "src", element=veri)
+            title  = veri.select_text("div.b-content__inline_item-link > a")
+            href   = veri.select_attr("a", "href")
+            poster = veri.select_poster()
 
             results.append(SearchResult(
-                title  = self.clean_title(title),
+                title  = title,
                 url    = href,
                 poster = poster
             ))
@@ -159,7 +159,7 @@ class HDrezka(PluginBase):
                                     title   = f"{s_name} - {ep_name}",
                                     url     = json.dumps(ep_url_data)
                                 ))
-                    except:
+                    except Exception:
                         continue
 
             if not episodes:
@@ -209,13 +209,13 @@ class HDrezka(PluginBase):
 
         try:
             return base64.b64decode(cleaned).decode()
-        except:
+        except Exception:
             return ""
 
     async def load_links(self, url: str) -> list[ExtractResult]:
         try:
             res = json.loads(url)
-        except:
+        except Exception:
             # Fallback for direct URLs
             return [ExtractResult(name=self.name, url=url)]
 
@@ -233,7 +233,7 @@ class HDrezka(PluginBase):
                     source_data = json.loads(script_match.group(1))
                     streams     = source_data.get("streams", "")
                     results.extend(self._invoke_sources(self.name, streams))
-                except:
+                except Exception:
                     pass
 
             # Fallback for series if script missing or stream not found
@@ -276,7 +276,7 @@ class HDrezka(PluginBase):
                                         results.extend(self._invoke_sources("Default", f_data["url"]))
                                         if results:
                                             break
-                        except:
+                        except Exception:
                             pass
         else:
             # Series or Translatable Movie
@@ -307,7 +307,7 @@ class HDrezka(PluginBase):
                     data = istek.json()
                     if data.get("url"):
                         results.extend(self._invoke_sources(server["translator_name"], data["url"]))
-                except:
+                except Exception:
                     continue
 
         return results

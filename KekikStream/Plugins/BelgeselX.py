@@ -60,14 +60,14 @@ class BelgeselX(PluginBase):
         return " ".join(new_words)
 
     async def get_main_page(self, page: int, url: str, category: str) -> list[MainPageResult]:
-        istek  = self.cloudscraper.get(f"{url}{page}")
+        istek  = await self.async_cf_get(f"{url}{page}")
         secici = HTMLHelper(istek.text)
 
         results = []
         for container in secici.select("div.gen-movie-contain"):
-            poster = secici.select_attr("div.gen-movie-img img", "src", container)
-            title  = secici.select_text("div.gen-movie-info h3 a", container)
-            href   = secici.select_attr("div.gen-movie-info h3 a", "href", container)
+            poster = container.select_attr("div.gen-movie-img img", "src")
+            title  = container.select_text("div.gen-movie-info h3 a")
+            href   = container.select_attr("div.gen-movie-info h3 a", "href")
 
             if title and href:
                 results.append(MainPageResult(
@@ -83,7 +83,7 @@ class BelgeselX(PluginBase):
         # Google Custom Search API kullanıyor
         cx = "016376594590146270301:iwmy65ijgrm"
 
-        token_resp = self.cloudscraper.get(f"https://cse.google.com/cse.js?cx={cx}")
+        token_resp = await self.async_cf_get(f"https://cse.google.com/cse.js?cx={cx}")
         token_text = token_resp.text
 
         secici  = HTMLHelper(token_text)
@@ -100,7 +100,7 @@ class BelgeselX(PluginBase):
             f"&callback=google.search.cse.api9969&rurl=https%3A%2F%2Fbelgeselx.com%2F"
         )
 
-        resp      = self.cloudscraper.get(search_url)
+        resp      = await self.async_cf_get(search_url)
         resp_text = resp.text
 
         secici2 = HTMLHelper(resp_text)
@@ -124,7 +124,7 @@ class BelgeselX(PluginBase):
             clean_title = title.split("İzle")[0].strip()
             results.append(SearchResult(
                 title  = self._to_title_case(clean_title),
-                url    = url_val,
+                url    = self.fix_url(url_val),
                 poster = poster
             ))
 
@@ -154,11 +154,11 @@ class BelgeselX(PluginBase):
 
         episodes = []
         for i, ep in enumerate(secici.select("div.gen-movie-contain")):
-            name    = secici.select_text("div.gen-movie-info h3 a", ep)
-            href    = secici.select_attr("div.gen-movie-info h3 a", "href", ep)
-            item_id = secici.select_attr("div.gen-movie-info h3 a", "id", ep)
+            name    = ep.select_text("div.gen-movie-info h3 a")
+            href    = ep.select_attr("div.gen-movie-info h3 a", "href")
+            item_id = ep.select_attr("div.gen-movie-info h3 a", "id")
             if name and href:
-                s, e = secici.extract_season_episode(secici.select_text("div.gen-single-meta-holder ul li", ep))
+                s, e = secici.extract_season_episode(ep.select_text("div.gen-single-meta-holder ul li"))
                 # ID'yi URL'ye ekle ki load_links doğru bölümü çekebilsin
                 final_url = self.fix_url(href)
                 if item_id:

@@ -40,13 +40,13 @@ class RealFilmIzle(PluginBase):
     async def get_articles(self, secici: HTMLHelper) -> list[dict]:
         articles = []
         for veri in secici.select("article.movie-box"):
-            title  = secici.select_text("div.name a", veri) or secici.select_attr("div.name a", "title", veri) or secici.select_attr("a", "title", veri)
-            href   = secici.select_attr("div.name a", "href", veri) or secici.select_attr("a", "href", veri)
-            poster = secici.select_poster("img", veri)
+            title  = veri.select_text("div.name a") or veri.select_attr("div.name a", "title") or veri.select_attr("a", "title")
+            href   = veri.select_attr("div.name a", "href") or veri.select_attr("a", "href")
+            poster = veri.select_poster("img")
 
             if title and href:
                 articles.append({
-                    "title" : self.clean_title(title),
+                    "title" : title,
                     "url"   : self.fix_url(href),
                     "poster": self.fix_url(poster),
                 })
@@ -73,7 +73,7 @@ class RealFilmIzle(PluginBase):
 
         # Original title to extract year safely
         raw_title   = secici.select_text("div.film h1")
-        title       = self.clean_title(raw_title)
+        title       = raw_title
         poster      = secici.select_poster("div.poster img")
         description = secici.select_text("div.description p") or secici.select_text("div.description")
 
@@ -123,6 +123,10 @@ class RealFilmIzle(PluginBase):
         secici = HTMLHelper(istek.text)
 
         iframe = secici.select_attr("div.video-content iframe", "src")
+        if not iframe:
+            return []
+
+        iframe = self.fix_url(iframe)
         result = await self.extract(iframe)
 
         return [result] if result else []

@@ -40,13 +40,13 @@ class FilmciBaba(PluginBase):
 
         results = []
         for item in secici.select("div.movie-preview"):
-            title_el = secici.select_first(".movie-title a", item)
+            title_el = item.select_first(".movie-title a")
             if not title_el:
                 continue
 
-            title  = self.clean_title(title_el.text(strip=True))
+            title  = title_el.text(strip=True)
             href   = self.fix_url(title_el.attrs.get("href"))
-            poster = self.fix_url(secici.select_poster(".movie-poster img", item))
+            poster = self.fix_url(item.select_poster(".movie-poster img"))
 
             results.append(MainPageResult(
                 category = category,
@@ -63,13 +63,13 @@ class FilmciBaba(PluginBase):
 
         results = []
         for item in secici.select("div.movie-preview"):
-            title_el = secici.select_first(".movie-title a", item)
+            title_el = item.select_first(".movie-title a")
             if not title_el:
                 continue
 
-            title  = self.clean_title(title_el.text(strip=True))
+            title  = title_el.text(strip=True)
             href   = self.fix_url(title_el.attrs.get("href"))
-            poster = self.fix_url(secici.select_poster(".movie-poster img", item))
+            poster = self.fix_url(item.select_poster(".movie-poster img"))
 
             results.append(SearchResult(
                 title  = title,
@@ -83,7 +83,7 @@ class FilmciBaba(PluginBase):
         istek  = await self.httpx.get(url)
         secici = HTMLHelper(istek.text)
 
-        title       = self.clean_title(secici.select_text("h1"))
+        title       = secici.select_text("h1")
         poster      = secici.select_poster(".poster img")
         description = secici.select_text(".excerpt p")
         year        = secici.extract_year(".release", ".movie-info")
@@ -108,7 +108,7 @@ class FilmciBaba(PluginBase):
 
         episodes = []
         for i, el in enumerate(ep_elements):
-            name = secici.select_text(".part-name", el) or f"Bölüm {i+1}"
+            name = el.select_text(".part-name") or f"Bölüm {i+1}"
             href = el.attrs.get("href") or url
             s, e = secici.extract_season_episode(name)
             episodes.append(Episode(season=s or 1, episode=e or (i + 1), title=name, url=self.fix_url(href)))
@@ -141,10 +141,7 @@ class FilmciBaba(PluginBase):
             # Use general extract method
             extracted = await self.extract(iframe)
             if extracted:
-                if isinstance(extracted, list):
-                    results.extend(extracted)
-                else:
-                    results.append(extracted)
+                self.collect_results(results, extracted)
             else:
                  results.append(ExtractResult(
                     name    = "FilmciBaba | External",

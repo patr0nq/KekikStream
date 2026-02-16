@@ -34,7 +34,7 @@ class VidPapi(ExtractorBase):
             if raw_subs := sel.regex_first(r'var playerjsSubtitle\s*=\s*"([^"]*)"'):
                 for lang, link in HTMLHelper(raw_subs).regex_all(r'\[(.*?)\](https?://[^\s\",]+)'):
                     subtitles.append(Subtitle(name=lang.strip(), url=link.strip()))
-        except:
+        except Exception:
             pass
 
         # 2. Videoyu çek

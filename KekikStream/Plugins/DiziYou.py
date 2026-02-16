@@ -33,9 +33,9 @@ class DiziYou(PluginBase):
 
         results = []
         for veri in secici.select("div.single-item"):
-            title  = secici.select_text("div#categorytitle a", veri)
-            href   = secici.select_attr("div#categorytitle a", "href", veri)
-            poster = secici.select_attr("img", "src", veri)
+            title  = veri.select_text("div#categorytitle a")
+            href   = veri.select_attr("div#categorytitle a", "href")
+            poster = veri.select_attr("img", "src")
 
             if title and href:
                 results.append(MainPageResult(
@@ -53,9 +53,9 @@ class DiziYou(PluginBase):
 
         results = []
         for afis in secici.select("div.incontent div#list-series"):
-            title  = secici.select_text("div#categorytitle a", afis)
-            href   = secici.select_attr("div#categorytitle a", "href", afis)
-            poster = (secici.select_attr("img", "src", afis) or secici.select_attr("img", "data-src", afis))
+            title  = afis.select_text("div#categorytitle a")
+            href   = afis.select_attr("div#categorytitle a", "href")
+            poster = (afis.select_attr("img", "src") or afis.select_attr("img", "data-src"))
 
             if title and href:
                 results.append(SearchResult(
@@ -81,9 +81,9 @@ class DiziYou(PluginBase):
 
         episodes = []
         for link in secici.select("div#scrollbar-container a"):
-            href = secici.select_attr(None, "href", link)
+            href = link.select_attr(None, "href")
             if href:
-                name = secici.select_text("div.bolumismi", link).strip("()")
+                name = link.select_text("div.bolumismi").strip("()")
                 s, e = secici.extract_season_episode(f"{name} {href}")
                 if e:
                     episodes.append(Episode(

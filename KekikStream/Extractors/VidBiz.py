@@ -20,7 +20,7 @@ class VidBiz(ExtractorBase):
         unpacked = ""
         try:
             unpacked = Packer.unpack(eval_script)
-        except:
+        except Exception:
              raise ValueError("VidBiz: Unpack hatası")
 
         # window.kaken="..."
@@ -38,7 +38,7 @@ class VidBiz(ExtractorBase):
 
         try:
             data = resp.json()
-        except:
+        except Exception:
             raise ValueError("VidBiz: API yanıtı JSON değil")
 
         if data.get("status") != "ok":

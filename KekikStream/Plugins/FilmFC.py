@@ -33,12 +33,12 @@ class FilmFC(PluginBase):
     async def get_articles(self, secici: HTMLHelper) -> list[dict]:
         articles = []
         for veri in secici.select("div.icerik div.yan"):
-            title  = secici.select_attr("a.baslik", "title", veri)
-            href   = secici.select_attr("a.baslik", "href", veri)
-            poster = secici.select_poster("img", veri)
+            title  = veri.select_attr("a.baslik", "title")
+            href   = veri.select_attr("a.baslik", "href")
+            poster = veri.select_poster("img")
 
             articles.append({
-                "title" : self.clean_title(title),
+                "title" : title,
                 "url"   : self.fix_url(href),
                 "poster": self.fix_url(poster),
             })
@@ -63,7 +63,7 @@ class FilmFC(PluginBase):
         istek  = await self.httpx.get(url)
         secici = HTMLHelper(istek.text)
 
-        title       = self.clean_title(secici.select_text("div.bilgi h2"))
+        title       = secici.select_text("div.bilgi h2")
         poster      = secici.select_poster("div.resim img")
         year        = secici.select_text("div.bilgi a[href*=yil]")
         description = secici.select_direct_text("div.slayt-aciklama")

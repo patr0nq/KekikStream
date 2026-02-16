@@ -55,9 +55,9 @@ class SezonlukDizi(PluginBase):
 
         results = []
         for veri in secici.select("div.afis a"):
-            title  = secici.select_text("div.description", veri)
-            href   = secici.select_attr("a", "href", veri)
-            poster = secici.select_attr("img", "data-src", veri)
+            title  = veri.select_text("div.description")
+            href   = veri.select_attr("a", "href")
+            poster = veri.select_attr("img", "data-src")
 
             if title and href:
                 results.append(MainPageResult(
@@ -75,9 +75,9 @@ class SezonlukDizi(PluginBase):
 
         results = []
         for afis in secici.select("div.afis a"):
-            title  = secici.select_text("div.description", afis)
-            href   = secici.select_attr("a", "href", afis)
-            poster = secici.select_attr("img", "data-src", afis)
+            title  = afis.select_text("div.description")
+            href   = afis.select_attr("a", "href")
+            poster = afis.select_attr("img", "data-src")
 
             if title and href:
                 results.append(SearchResult(
@@ -110,10 +110,10 @@ class SezonlukDizi(PluginBase):
         e_sel    = HTMLHelper(e_resp.text)
         episodes = []
         for row in e_sel.select("table.unstackable tbody tr"):
-            tds = e_sel.select("td", row)
+            tds = row.select("td")
             if len(tds) >= 4:
-                name = e_sel.select_text("a", tds[3])
-                href = e_sel.select_attr("a", "href", tds[3])
+                name = tds[3].select_text("a")
+                href = tds[3].select_attr("a", "href")
                 if name and href:
                     s, e = e_sel.extract_season_episode(f"{tds[1].text(strip=True)} {tds[2].text(strip=True)}")
                     episodes.append(Episode(

@@ -52,9 +52,9 @@ class DiziBox(PluginBase):
 
         results = []
         for veri in secici.select("article.detailed-article"):
-            title  = secici.select_text("h3 a", veri)
-            href   = secici.select_attr("h3 a", "href", veri)
-            poster = secici.select_attr("img", "src", veri)
+            title  = veri.select_text("h3 a")
+            href   = veri.select_attr("h3 a", "href")
+            poster = veri.select_attr("img", "src")
 
             if title and href:
                 results.append(MainPageResult(
@@ -76,9 +76,9 @@ class DiziBox(PluginBase):
 
         results = []
         for item in secici.select("article.detailed-article"):
-            title  = secici.select_text("h3 a", item)
-            href   = secici.select_attr("h3 a", "href", item)
-            poster = secici.select_attr("img", "src", item)
+            title  = item.select_text("h3 a")
+            href   = item.select_attr("h3 a", "href")
+            poster = item.select_attr("img", "src")
 
             if title and href:
                 results.append(SearchResult(
@@ -106,8 +106,8 @@ class DiziBox(PluginBase):
             r = await self.httpx.get(self.fix_url(link))
             s_secici = HTMLHelper(r.text)
             for bolum in s_secici.select("article.grid-box"):
-                name = s_secici.select_text("div.post-title a", bolum)
-                href = s_secici.select_attr("div.post-title a", "href", bolum)
+                name = bolum.select_text("div.post-title a")
+                href = bolum.select_attr("div.post-title a", "href")
                 if name and href:
                     s, e = s_secici.extract_season_episode(name)
                     episodes.append(Episode(season=s, episode=e, title=name, url=self.fix_url(href)))
@@ -166,9 +166,9 @@ class DiziBox(PluginBase):
                         decoded_atob = urllib.parse.unquote(atob_data)
                         str_atob     = base64.b64decode(decoded_atob).decode("utf-8")
 
-                    iframe_src = HTMLHelper(str_atob).select_attr("div#Player iframe", "src")
-                    if iframe_src:
-                        results.append(iframe_src)
+                        iframe_src = HTMLHelper(str_atob).select_attr("div#Player iframe", "src")
+                        if iframe_src:
+                            results.append(iframe_src)
 
                     break
 
@@ -196,8 +196,8 @@ class DiziBox(PluginBase):
                         results.append(data)
 
         for alternatif in secici.select("div.video-toolbar option[value]"):
-            alt_name = secici.select_text(None, alternatif)
-            alt_link = secici.select_attr(None, "value", alternatif)
+            alt_name = alternatif.select_text(None)
+            alt_link = alternatif.select_attr(None, "value")
 
             if not alt_link:
                 continue

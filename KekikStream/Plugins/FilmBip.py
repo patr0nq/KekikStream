@@ -40,9 +40,9 @@ class FilmBip(PluginBase):
 
         results = []
         for veri in secici.select("div.poster-long"):
-            title  = secici.select_attr("a.block img.lazy", "alt", veri)
-            href   = secici.select_attr("a.block", "href", veri)
-            poster = secici.select_poster("a.block img.lazy", veri)
+            title  = veri.select_attr("a.block img.lazy", "alt")
+            href   = veri.select_attr("a.block", "href")
+            poster = veri.select_poster("a.block img.lazy")
 
             if title and href:
                 results.append(MainPageResult(
@@ -80,9 +80,9 @@ class FilmBip(PluginBase):
 
         results = []
         for veri in secici.select("li"):
-            title = secici.select_text("a.block.truncate", veri)
-            href = secici.select_attr("a", "href", veri)
-            poster = secici.select_attr("img.lazy", "data-src", veri)
+            title = veri.select_text("a.block.truncate")
+            href = veri.select_attr("a", "href")
+            poster = veri.select_attr("img.lazy", "data-src")
 
             if title and href:
                 results.append(SearchResult(
@@ -97,7 +97,7 @@ class FilmBip(PluginBase):
         istek  = await self.httpx.get(url)
         secici = HTMLHelper(istek.text)
 
-        title       = self.clean_title(secici.select_direct_text("div.page-title h1"))
+        title       = secici.select_direct_text("div.page-title h1")
         poster      = secici.select_poster("div.series-profile-image a img")
         description = secici.select_text("div.series-profile-infos-in.article p") or secici.select_text("div.series-profile-summary p")
         tags        = secici.select_texts("div.series-profile-type.tv-show-profile-type a")
@@ -126,7 +126,7 @@ class FilmBip(PluginBase):
         results = []
         for tab in secici.select("ul.tab.alternative-group li[data-number]"):
             tab_id   = tab.attrs.get("data-number")
-            tab_name = secici.select_text(None, tab)
+            tab_name = tab.select_text(None)
             tab_hash = tab.attrs.get("data-group-hash")
 
             if not tab_id:
@@ -138,8 +138,8 @@ class FilmBip(PluginBase):
             content_div = secici.select_first(f"div#{tab_id}")
 
             # Eğer div var ve içi doluysa oradan al
-            if content_div and secici.select("ul li button", content_div):
-                buttons = secici.select("ul li button", content_div)
+            if content_div and content_div.select("ul li button"):
+                buttons = content_div.select("ul li button")
                 for btn in buttons:
                     button_data.append((btn.text(strip=True), btn.attrs.get("data-hhs")))
 
@@ -181,21 +181,15 @@ class FilmBip(PluginBase):
                             name_override = f"{tab_name} | {player_name}"
                         )
                         if data:
-                            if isinstance(data, list):
-                                results.extend(data)
-                            else:
-                                results.append(data)
+                            self.collect_results(results, data)
 
         # Eğer hiç sonuç bulunamazsa fallback
         if not results:
              for player in secici.select("div#tv-spoox2"):
-                if iframe := secici.select_attr("iframe", "src", player):
+                if iframe := player.select_attr("iframe", "src"):
                     iframe = self.fix_url(iframe)
                     data = await self.extract(iframe)
                     if data:
-                        if isinstance(data, list):
-                            results.extend(data)
-                        else:
-                            results.append(data)
+                        self.collect_results(results, data)
 
         return results
