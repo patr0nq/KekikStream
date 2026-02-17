@@ -4,14 +4,16 @@ from KekikStream.Core import ExtractorBase, ExtractResult, Subtitle, HTMLHelper
 from Kekik.Sifreleme  import Packer
 
 class PlayerFilmIzle(ExtractorBase):
-    name     = "PlayerFilmIzle"
-    main_url = "https://player.filmizle.in"
+    name              = "PlayerFilmIzle"
+    main_url          = "https://player.filmizle.in"
+    supported_domains = ["filmizle.in", "filmdefilm.xyz", "filmpablo.xyz"]
 
     def can_handle_url(self, url: str) -> bool:
-        return "filmizle.in" in url or "fireplayer" in url.lower()
+        return any(d in url for d in self.supported_domains) or "fireplayer" in url.lower()
 
     async def extract(self, url: str, referer: str = None) -> ExtractResult:
-        ref = referer or self.main_url
+        ref      = referer or self.main_url
+        base_url = self.get_base_url(url)
         self.httpx.headers.update({"Referer": ref})
 
         resp = await self.httpx.get(url)
@@ -29,8 +31,8 @@ class PlayerFilmIzle(ExtractorBase):
              raise ValueError(f"PlayerFilmIzle: Data bulunamadı. {url}")
 
         resp_vid = await self.httpx.post(
-            f"{self.main_url}/player/index.php?data={data_val}&do=getVideo",
-            data    = {"hash": data_val, "r": ""},
+            f"{base_url}/player/index.php?data={data_val}&do=getVideo",
+            data    = {"hash": data_val, "r": ref},
             headers = {"X-Requested-With": "XMLHttpRequest"}
         )
 
