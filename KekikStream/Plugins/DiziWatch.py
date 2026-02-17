@@ -1,8 +1,8 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
 from KekikStream.Core import PluginBase, MainPageResult, SearchResult, SeriesInfo, Episode, ExtractResult, HTMLHelper
+from urllib.parse     import unquote
 import re
-from urllib.parse import unquote
 
 class DiziWatch(PluginBase):
     name        = "DiziWatch"

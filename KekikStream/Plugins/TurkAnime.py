@@ -25,9 +25,10 @@ class TurkAnime(PluginBase):
 
     _AES_KEY    = "710^8A@3@>T2}#zN5xK?kR7KNKb@-A!LzYL5~M1qU0UfdWsZoBm4UUat%}ueUv6E--*hDPPbH7K2bp9^3o41hw,khL:}Kx8080@M"
     _CSRF_TOKEN = "EqdGHqwZJvydjfbmuYsZeGvBxDxnQXeARRqUNbhRYnPEWqdDnYFEKVBaUPCAGTZA"
+    _COOKIES    = {"yasOnay": "1"}
 
     async def get_main_page(self, page: int, url: str, category: str) -> list[MainPageResult]:
-        istek  = await self.httpx.get(url)
+        istek  = await self.httpx.get(url, cookies=self._COOKIES)
         secici = HTMLHelper(istek.text)
 
         results = []
@@ -47,16 +48,51 @@ class TurkAnime(PluginBase):
         return results
 
     async def search(self, query: str) -> list[SearchResult]:
-        istek  = await self.httpx.post(f"{self.main_url}/arama", data={"arama": query})
-        secici = HTMLHelper(istek.text)
+        istek = await self.httpx.post(
+            f"{self.main_url}/arama",
+            data    = {"arama": query},
+            cookies = self._COOKIES,
+        )
+
+        # Sonuçlar AJAX ile yükleniyor; encoded arama URL'sini çıkar
+        ajax_match = re.search(r"ajax/arama&aranan=([^&'\"]+)", istek.text)
+        if not ajax_match:
+            return []
+
+        ajax_url  = f"{self.main_url}/{ajax_match.group(0)}"
+        ajax_resp = await self.httpx.get(
+            ajax_url,
+            headers = {"X-Requested-With": "XMLHttpRequest"},
+            cookies = self._COOKIES,
+        )
+
+        # Tek sonuç varsa site JS ile yönlendiriyor: window.location = "anime/..."
+        redirect_match = re.search(r'window\.location\s*=\s*"([^"]+)"', ajax_resp.text)
+        if redirect_match:
+            redirect_url = self.fix_url(redirect_match.group(1))
+            # Yönlendirilen sayfadan bilgileri çek
+            try:
+                detail = await self.httpx.get(redirect_url, cookies=self._COOKIES)
+                dsecici = HTMLHelper(detail.text)
+                title   = dsecici.select_text("div#detayPaylas div.panel-title") or redirect_url.rstrip("/").split("/")[-1]
+                poster  = dsecici.select_attr("div#detayPaylas div.imaj img", "data-src")
+                return [SearchResult(
+                    title  = title.strip(),
+                    url    = redirect_url,
+                    poster = self.fix_url(poster),
+                )]
+            except Exception:
+                return [SearchResult(title=redirect_url.rstrip("/").split("/")[-1], url=redirect_url, poster=None)]
+
+        secici = HTMLHelper(ajax_resp.text)
 
         results = []
-        for veri in secici.select("div#orta-icerik div.panel"):
+        for veri in secici.select("div.panel"):
             title  = veri.select_text("div.panel-title a")
             href   = veri.select_attr("div.panel-title a", "href")
             poster = veri.select_attr("img", "data-src")
 
-            if title and href:
+            if title and href and "/anime/" in href:
                 results.append(SearchResult(
                     title  = title.strip(),
                     url    = self.fix_url(href),
@@ -66,7 +102,7 @@ class TurkAnime(PluginBase):
         return results
 
     async def load_item(self, url: str) -> SeriesInfo:
-        istek  = await self.httpx.get(url)
+        istek  = await self.httpx.get(url, cookies=self._COOKIES)
         secici = HTMLHelper(istek.text)
 
         title       = secici.select_text("div#detayPaylas div.panel-title") or ""
@@ -96,7 +132,7 @@ class TurkAnime(PluginBase):
                     "X-Requested-With" : "XMLHttpRequest",
                     "token"            : token,
                 },
-                cookies = {"yasOnay": "1"},
+                cookies = self._COOKIES,
             )
             bol_secici = HTMLHelper(bol_resp.text)
 
@@ -161,7 +197,7 @@ class TurkAnime(PluginBase):
             player_resp = await self.httpx.get(
                 f"{self.main_url}/player/{player_hash}",
                 headers = {"Referer": f"{self.main_url}/"},
-                cookies = {"yasOnay": "1"},
+                cookies = self._COOKIES,
             )
 
             # apiURL'yi HTML'den çek (doğrulama)
@@ -179,7 +215,7 @@ class TurkAnime(PluginBase):
                     "X-Requested-With" : "XMLHttpRequest",
                     "Csrf-Token"       : self._CSRF_TOKEN,
                 },
-                cookies = {"yasOnay": "1"},
+                cookies = self._COOKIES,
             )
 
             data = src_resp.json()
@@ -216,7 +252,7 @@ class TurkAnime(PluginBase):
         return results
 
     async def load_links(self, url: str) -> list[ExtractResult]:
-        istek  = await self.httpx.get(url)
+        istek  = await self.httpx.get(url, cookies=self._COOKIES)
         secici = HTMLHelper(istek.text)
 
         response = []
