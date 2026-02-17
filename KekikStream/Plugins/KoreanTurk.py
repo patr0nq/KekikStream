@@ -12,17 +12,6 @@ class KoreanTurk(PluginBase):
 
     main_page   = {
         f"{main_url}/bolumler/page/" : "Son Eklenenler",
-        f"{main_url}/Konu-Aile"     : "Aile",
-        f"{main_url}/Konu-Aksiyon"  : "Aksiyon",
-        f"{main_url}/Konu-Dram"     : "Dram",
-        f"{main_url}/Konu-Fantastik": "Fantastik",
-        f"{main_url}/Konu-Genclik"  : "Gençlik",
-        f"{main_url}/Konu-Gerilim"  : "Gerilim",
-        f"{main_url}/Konu-Gizem"    : "Gizem",
-        f"{main_url}/Konu-Komedi"   : "Komedi",
-        f"{main_url}/Konu-Korku"    : "Korku",
-        f"{main_url}/Konu-Romantik" : "Romantik",
-        f"{main_url}/Konu-Suc"      : "Suç",
     }
 
     def _strip_episode(self, url: str) -> str:
@@ -30,48 +19,6 @@ class KoreanTurk(PluginBase):
         return re.sub(r"-[0-9]+(-final)?-bolum-izle\.html", "", url)
 
     async def get_main_page(self, page: int, url: str, category: str) -> list[MainPageResult]:
-        if "Konu-" in url:
-            istek  = await self.httpx.get(url)
-            secici = HTMLHelper(istek.text)
-
-            results = []
-            for img in secici.select("img[onload*='NcodeImageResizer']"):
-                prev_a = img.select_first_parent("a") if hasattr(img, "select_first_parent") else None
-
-                title_el = img.previous_sibling_tag("a") if hasattr(img, "previous_sibling_tag") else None
-
-                # XPath benzeri: preceding-sibling::a[1]
-                parent = img.parent
-                if parent:
-                    links = parent.select("a")
-                    prev_link = None
-                    for a_tag in links:
-                        img_node = a_tag.select_first("img[onload*='NcodeImageResizer']") if hasattr(a_tag, "select_first") else None
-                        if img_node:
-                            break
-                        prev_link = a_tag
-
-                # Basit fallback: sayfadaki tüm konu kartlarını bul
-                pass
-
-            # Basit yaklaşım: standartbox kullan
-            for veri in secici.select("div.standartbox"):
-                dizi  = veri.select_text("h2 span")
-                href  = veri.select_attr("a", "href")
-                poster = veri.select_attr("div.resimcik img", "src")
-
-                if dizi and href:
-                    if "izle.html" in href:
-                        href = self._strip_episode(href)
-                    results.append(MainPageResult(
-                        category = category,
-                        title    = dizi.strip(),
-                        url      = self.fix_url(href),
-                        poster   = self.fix_url(poster),
-                    ))
-
-            return results
-
         istek  = await self.httpx.get(f"{url}{page}")
         secici = HTMLHelper(istek.text)
 
