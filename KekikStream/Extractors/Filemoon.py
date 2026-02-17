@@ -1,11 +1,11 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
-from KekikStream.Core import PackedJSExtractor, ExtractResult, HTMLHelper, SOURCES_REGEX
+from KekikStream.Core import PackedJSExtractor, ExtractResult, HTMLHelper, M3U8_FILE_REGEX
 
 class Filemoon(PackedJSExtractor):
     name        = "Filemoon"
     main_url    = "https://filemoon.to"
-    url_pattern = SOURCES_REGEX
+    url_pattern = M3U8_FILE_REGEX
 
     # Filemoon'un farklı domainlerini destekle
     supported_domains = [

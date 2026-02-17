@@ -198,7 +198,11 @@ class Dizilla(PluginBase):
         next_data   = loads(next_data_text)
         secure_data = next_data.get("props", {}).get("pageProps", {}).get("secureData", {})
         decrypted   = await self.decrypt_response(secure_data)
-        results     = decrypted.get("RelatedResults", {}).get("getEpisodeSources", {}).get("result", [])
+
+        related = decrypted.get("RelatedResults", {})
+        results = related.get("getEpisodeSources", {}).get("result", [])
+        if not results:
+             results = related.get("getEpisodeSourcesById", {}).get("result", [])
 
         if not results:
             return []

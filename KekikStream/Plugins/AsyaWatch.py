@@ -152,7 +152,7 @@ class AsyaWatch(PluginBase):
         istek = await self.httpx.get(url)
         data  = self._parse_secure_data(istek.text)
 
-        item = data.get("ContentItem", {})
+        item = data.get("contentItem", {})
         title       = item.get("original_title", "")
         poster      = self._fix_poster(item.get("poster_url", ""))
         description = item.get("description", "")
@@ -164,19 +164,22 @@ class AsyaWatch(PluginBase):
         related = data.get("RelatedResults", {})
 
         actors = []
-        cast_data = related.get("getCastById", {}).get("result", [])
+        cast_data = related.get("getSerieCastsById", {}).get("result", [])
+        if not cast_data:
+            cast_data = related.get("getMovieCastsById", {}).get("result", [])
+
         for c in cast_data:
             if c.get("name"):
                 actors.append(c["name"])
 
         # Dizi mi?
-        series_data = related.get("getSeriesDataById", {})
+        series_data = related.get("getSerieSeasonAndEpisodes", {})
         if series_data:
             episodes = []
-            for season in series_data.get("seasons", []):
+            for season in series_data.get("result", []):
                 szn = season.get("season_no", 1)
                 for ep in season.get("episodes", []):
-                    ep_text = ep.get("ep_text", "")
+                    ep_text = ep.get("episode_text", "")
                     ep_no   = ep.get("episode_no")
                     ep_slug = ep.get("used_slug", "")
                     if ep_slug:
@@ -218,8 +221,11 @@ class AsyaWatch(PluginBase):
 
         source_content = None
 
-        if "/dizi/" in url:
-            ep_sources = related.get("getEpisodeSourcesById", {})
+        if "/dizi/" in url or "/bolum/" in url:
+            ep_sources = related.get("getEpisodeSources", {})
+            if not ep_sources:
+                 ep_sources = related.get("getEpisodeSourcesById", {})
+
             if ep_sources.get("state"):
                 first = (ep_sources.get("result") or [None])[0]
                 if first:

@@ -1,6 +1,7 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
 from KekikStream.Core import ExtractorBase, ExtractResult, Subtitle, HTMLHelper
+import re
 
 class ContentX(ExtractorBase):
     name     = "ContentX"
@@ -24,6 +25,11 @@ class ContentX(ExtractorBase):
         sel  = HTMLHelper(resp.text)
 
         v_id = sel.regex_first(r"window\.openPlayer\('([^']+)'")
+        if not v_id:
+            # URL'den v parametresini çekmeyi dene
+            v_id = re.search(r"v=([^&]+)", url)
+            v_id = v_id.group(1) if v_id else None
+
         if not v_id:
             raise ValueError(f"ContentX: ID bulunamadı. {url}")
 
