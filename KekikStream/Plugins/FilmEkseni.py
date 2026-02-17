@@ -1,7 +1,6 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
 from KekikStream.Core import PluginBase, MainPageResult, SearchResult, MovieInfo, ExtractResult, HTMLHelper
-import asyncio
 
 class FilmEkseni(PluginBase):
     name        = "FilmEkseni"
@@ -198,4 +197,4 @@ class FilmEkseni(PluginBase):
         for name, link_url, is_active in sources:
             tasks.append(self._get_source_links(name, link_url, is_active, secici if is_active else None))
 
-        return [item for sublist in await asyncio.gather(*tasks) for item in sublist]
+        return [item for sublist in await self.gather_with_limit(tasks) for item in sublist]

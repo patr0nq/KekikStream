@@ -1,7 +1,7 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
 from KekikStream.Core import PluginBase, MainPageResult, SearchResult, MovieInfo, ExtractResult, HTMLHelper
-import asyncio, contextlib
+import contextlib
 
 class UgurFilm(PluginBase):
     name        = "UgurFilm"
@@ -164,14 +164,14 @@ class UgurFilm(PluginBase):
                     process_alt(vid, "mailru", "2")
                 ]
 
-                alt_results = await asyncio.gather(*tasks)
+                alt_results = await self.gather_with_limit(tasks)
 
                 return [item for sublist in alt_results for item in sublist]
             except Exception:
                 return []
 
         # Tüm partları paralel işle
-        groups = await asyncio.gather(*(process_part(p) for p in part_links))
+        groups = await self.gather_with_limit([process_part(p) for p in part_links])
 
         for group in groups:
             results.extend(group)

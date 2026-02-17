@@ -179,23 +179,23 @@ class FilmIzleIlk(PluginBase):
                 except Exception:
                     pass
 
-        for iframe in iframes:
-            # VidMoly özel işlem
-            if "vidmoly" in iframe.lower():
+        async def _process_iframe(iframe_url):
+            if "vidmoly" in iframe_url.lower():
                 try:
-                    i_resp  = await self.httpx.get(iframe, headers={"Referer": f"{self.main_url}/"})
+                    i_resp  = await self.httpx.get(iframe_url, headers={"Referer": f"{self.main_url}/"})
                     m3u_url = HTMLHelper(i_resp.text).regex_first(r'file:"([^"]+)')
                     if m3u_url:
-                        response.append(ExtractResult(
+                        return ExtractResult(
                             name    = "VidMoly",
                             url     = m3u_url,
                             referer = "https://vidmoly.to/",
-                        ))
-                        continue
+                        )
                 except Exception:
                     pass
+            return await self.extract(iframe_url, referer=f"{self.main_url}/")
 
-            data = await self.extract(iframe, referer=f"{self.main_url}/")
+        tasks = [_process_iframe(iframe) for iframe in iframes]
+        for data in await self.gather_with_limit(tasks):
             self.collect_results(response, data)
 
         return response

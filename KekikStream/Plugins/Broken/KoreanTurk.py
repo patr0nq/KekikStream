@@ -132,14 +132,8 @@ class KoreanTurk(PluginBase):
             if not ep_name or not ep_href:
                 continue
 
-            ep_episode = None
-            ep_season  = 1
-            ep_match = re.search(r"(\d+)\.Bölüm", ep_name)
-            if ep_match:
-                ep_episode = int(ep_match.group(1))
-            szn_match = re.search(r"(\d+)\.Sezon", ep_name)
-            if szn_match:
-                ep_season = int(szn_match.group(1))
+            ep_season, ep_episode = secici.extract_season_episode(ep_name)
+            ep_season = ep_season or 1
 
             episodes.append(Episode(
                 season  = ep_season,
@@ -160,24 +154,20 @@ class KoreanTurk(PluginBase):
         istek  = await self.httpx.get(url)
         secici = HTMLHelper(istek.text)
 
-        response = []
-
-        # iframe tab-pane'lerden
+        urls = []
         for iframe in secici.select("div.filmcik div.tab-pane iframe"):
             src = iframe.select_attr(None, "src")
-            if not src:
-                continue
-            src = self.fix_url(src)
-            data = await self.extract(src, referer=f"{self.main_url}/")
-            self.collect_results(response, data)
+            if src:
+                urls.append(self.fix_url(src))
 
-        # a tag href'lerden
         for a_tag in secici.select("div.filmcik div.tab-pane a"):
             href = a_tag.select_attr(None, "href")
-            if not href:
-                continue
-            href = self.fix_url(href)
-            data = await self.extract(href, referer=f"{self.main_url}/")
+            if href:
+                urls.append(self.fix_url(href))
+
+        tasks    = [self.extract(url, referer=f"{self.main_url}/") for url in urls]
+        response = []
+        for data in await self.gather_with_limit(tasks):
             self.collect_results(response, data)
 
         return self.deduplicate(response)

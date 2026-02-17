@@ -305,8 +305,10 @@ class SelcukFlix(PluginBase):
                         iframe_src = iframe_src.replace("sn.dplayer74.site", "sn.hotlinger.com")
 
                     data = await self.extract(iframe_src)
-                    if data:
-                        return [data]
+                    results = []
+                    self.collect_results(results, data)
+                    if results:
+                        return results
 
             return []
 

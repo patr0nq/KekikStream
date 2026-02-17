@@ -123,7 +123,7 @@ class FilmBip(PluginBase):
         istek  = await self.httpx.get(url)
         secici = HTMLHelper(istek.text)
 
-        results = []
+        extract_args = []
         for tab in secici.select("ul.tab.alternative-group li[data-number]"):
             tab_id   = tab.attrs.get("data-number")
             tab_name = tab.select_text(None)
@@ -174,22 +174,23 @@ class FilmBip(PluginBase):
                                         button_data.append((btn.text(strip=True), btn.attrs.get("data-hhs")))
 
             for player_name, iframe_url in button_data:
-                with suppress(Exception):
-                    if iframe_url:
-                        data = await self.extract(
-                            url           = self.fix_url(iframe_url),
-                            name_override = f"{tab_name} | {player_name}"
-                        )
-                        if data:
-                            self.collect_results(results, data)
+                if iframe_url:
+                    extract_args.append((self.fix_url(iframe_url), f"{tab_name} | {player_name}"))
+
+        tasks   = [self.extract(url=url, name_override=name) for url, name in extract_args]
+        results = []
+        for data in await self.gather_with_limit(tasks):
+            self.collect_results(results, data)
 
         # Eğer hiç sonuç bulunamazsa fallback
         if not results:
-             for player in secici.select("div#tv-spoox2"):
+            fallback_iframes = []
+            for player in secici.select("div#tv-spoox2"):
                 if iframe := player.select_attr("iframe", "src"):
-                    iframe = self.fix_url(iframe)
-                    data = await self.extract(iframe)
-                    if data:
-                        self.collect_results(results, data)
+                    fallback_iframes.append(self.fix_url(iframe))
+
+            tasks = [self.extract(iframe) for iframe in fallback_iframes]
+            for data in await self.gather_with_limit(tasks):
+                self.collect_results(results, data)
 
         return results

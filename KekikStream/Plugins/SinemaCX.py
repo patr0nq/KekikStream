@@ -1,7 +1,7 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
-from KekikStream.Core import PluginBase, MainPageResult, SearchResult, MovieInfo, Subtitle, ExtractResult, HTMLHelper
-import asyncio, contextlib
+from KekikStream.Core import PluginBase, MainPageResult, SearchResult, MovieInfo, ExtractResult, HTMLHelper
+import contextlib
 
 class SinemaCX(PluginBase):
     name        = "SinemaCX"
@@ -135,7 +135,7 @@ class SinemaCX(PluginBase):
                 subtitles = []
                 if sub_section := HTMLHelper(iframe_text).regex_first(r'playerjsSubtitle\s*=\s*"(.+?)"'):
                     for lang, link in HTMLHelper(sub_section).regex_all(r'\[(.*?)](https?://[^\s\",]+)'):
-                        subtitles.append(Subtitle(name=lang, url=self.fix_url(link)))
+                        subtitles.append(self.new_subtitle(self.fix_url(link), lang))
 
                 base_url = HTMLHelper(iframe_url).regex_first(r"https?://([^/]+)")
                 if base_url:
@@ -160,7 +160,7 @@ class SinemaCX(PluginBase):
                     items = extracted if isinstance(extracted, list) else [extracted]
                     for item in items:
                         item.name = name
-                        results.append(item)
+                    self.collect_results(results, items)
 
         return results
 
@@ -226,7 +226,7 @@ class SinemaCX(PluginBase):
         for src in sources:
             extract_tasks.append(process_task(src))
 
-        results_groups = await asyncio.gather(*extract_tasks)
+        results_groups = await self.gather_with_limit(extract_tasks)
 
         final_results = []
         for group in results_groups:

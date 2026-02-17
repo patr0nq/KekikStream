@@ -1,7 +1,7 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
-from KekikStream.Core import HTMLHelper, PluginBase, MainPageResult, SearchResult, MovieInfo, Episode, SeriesInfo, Subtitle, ExtractResult
-import base64, asyncio, contextlib
+from KekikStream.Core import HTMLHelper, PluginBase, MainPageResult, SearchResult, MovieInfo, Episode, SeriesInfo, ExtractResult
+import base64, contextlib
 
 class KultFilmler(PluginBase):
     name        = "KultFilmler"
@@ -182,20 +182,15 @@ class KultFilmler(PluginBase):
 
             items = extracted if isinstance(extracted, list) else [extracted]
             for item in items:
-                # İsim ve altyazı bilgilerini güncelle
-                # Orijinal extractor ismini ezmek için title kullan
                 if title:
                     item.name = title
-
-                # Varsa altyazıları ekle
                 if subtitles:
-                     # Copy update daha güvenli (Pydantic model)
                     if hasattr(item, "model_copy"):
                         item = item.model_copy(update={"subtitles": subtitles})
                     else:
                         item.subtitles = subtitles
 
-                results.append(item)
+            self.collect_results(results, items)
 
         return results
 
@@ -206,7 +201,7 @@ class KultFilmler(PluginBase):
 
         # Altyazı Bul
         sub_url   = helper.regex_first(r"(https?://[^\s\"]+\.srt)")
-        subtitles = [Subtitle(name="Türkçe", url=sub_url)] if sub_url else []
+        subtitles = [self.new_subtitle(sub_url, "Türkçe")] if sub_url else []
 
         # İşlenecek kaynakları topla: (Iframe_URL, Başlık)
         sources = []
@@ -233,7 +228,7 @@ class KultFilmler(PluginBase):
             alt_tasks.append(self._resolve_alt_page(self.fix_url(href), full_title))
 
         if alt_tasks:
-            resolved_alts = await asyncio.gather(*alt_tasks)
+            resolved_alts = await self.gather_with_limit(alt_tasks)
             for iframe, title in resolved_alts:
                 if iframe:
                     sources.append((iframe, title))
@@ -247,7 +242,7 @@ class KultFilmler(PluginBase):
                 for iframe, title in sources
         ]
 
-        results_groups = await asyncio.gather(*extract_tasks)
+        results_groups = await self.gather_with_limit(extract_tasks)
 
         # Sonuçları düzleştir
         final_results = []

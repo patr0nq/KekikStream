@@ -2,7 +2,7 @@
 
 from KekikStream.Core import PluginBase, MainPageResult, SearchResult, MovieInfo, SeriesInfo, Episode, Subtitle, ExtractResult, HTMLHelper
 from Kekik.Sifreleme  import Packer, StreamDecoder
-import random, string, json, asyncio, contextlib
+import random, string, json, contextlib
 
 class HDFilmCehennemi(PluginBase):
     name        = "HDFilmCehennemi"
@@ -221,13 +221,13 @@ class HDFilmCehennemi(PluginBase):
                     if file_url := t.get("file"):
                         label = t.get("label") or t.get("language") or "TR"
                         if t.get("kind", "captions") in ["captions", "subtitles"]:
-                            subtitles.append(Subtitle(name=label.upper(), url=self.fix_url(file_url)))
+                            subtitles.append(self.new_subtitle(self.fix_url(file_url), label.upper()))
                 return subtitles # JSON başarılıysa dön
 
             # Regex fallback
             for m in HTMLHelper(match).regex_all(r'file\s*:\s*["\']([^"\']+)["\'].*?(?:label|language)\s*:\s*["\']([^"\']+)["\']'):
                 file_url, lang = m
-                subtitles.append(Subtitle(name=lang.upper(), url=self.fix_url(file_url.replace("\\", ""))))
+                subtitles.append(self.new_subtitle(self.fix_url(file_url.replace("\\", "")), lang.upper()))
 
         # 2. PlayerJS (subtitle: "url,name;url,name")
         if not subtitles:
@@ -238,9 +238,9 @@ class HDFilmCehennemi(PluginBase):
                         # Basitçe virgülle ayırıp http kontrolü yapalım
                         parts = sub_item.split(",")
                         u, n  = (parts[0], parts[1]) if "http" in parts[0] else (parts[1], parts[0])
-                        subtitles.append(Subtitle(name=n.strip(), url=self.fix_url(u.strip())))
+                        subtitles.append(self.new_subtitle(self.fix_url(u.strip()), n.strip()))
                     elif "http" in sub_item:
-                        subtitles.append(Subtitle(name="TR", url=self.fix_url(sub_item.strip())))
+                        subtitles.append(self.new_subtitle(self.fix_url(sub_item.strip()), "TR"))
 
         # 3. HTML5 Track Tags
         if not subtitles:
@@ -248,7 +248,7 @@ class HDFilmCehennemi(PluginBase):
                 src   = track.attrs.get("src")
                 label = track.attrs.get("label") or track.attrs.get("srclang") or "TR"
                 if src:
-                    subtitles.append(Subtitle(name=label.upper(), url=self.fix_url(src)))
+                    subtitles.append(self.new_subtitle(self.fix_url(src), label.upper()))
 
         return subtitles
 
@@ -354,4 +354,4 @@ class HDFilmCehennemi(PluginBase):
         for vid, name, ref in sources:
             tasks.append(self._get_video_source(vid, name, ref))
 
-        return [item for sublist in await asyncio.gather(*tasks) for item in sublist]
+        return [item for sublist in await self.gather_with_limit(tasks) for item in sublist]

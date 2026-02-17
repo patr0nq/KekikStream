@@ -127,9 +127,9 @@ class FullHDFilmizlesene(PluginBase):
             if isinstance(t, dict):
                 link_list.extend(StringCodec.decode(v) for k, v in t.items())
 
+        tasks    = [self.extract(self.fix_url(link)) for link in link_list]
         response = []
-        for link in link_list:
-            data = await self.extract(self.fix_url(link))
+        for data in await self.gather_with_limit(tasks):
             self.collect_results(response, data)
 
         return response

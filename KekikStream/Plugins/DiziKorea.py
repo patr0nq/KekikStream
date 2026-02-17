@@ -141,14 +141,15 @@ class DiziKorea(PluginBase):
         istek  = await self.httpx.get(url)
         secici = HTMLHelper(istek.text)
 
-        response = []
+        iframes = []
         for btn in secici.select("div.video-services button"):
             iframe_src = btn.attrs.get("data-hhs")
-            if not iframe_src:
-                continue
+            if iframe_src:
+                iframes.append(self.fix_url(iframe_src))
 
-            iframe_src = self.fix_url(iframe_src)
-            data = await self.extract(iframe_src, referer=f"{self.main_url}/")
+        tasks    = [self.extract(url, referer=f"{self.main_url}/") for url in iframes]
+        response = []
+        for data in await self.gather_with_limit(tasks):
             self.collect_results(response, data)
 
         return self.deduplicate(response)

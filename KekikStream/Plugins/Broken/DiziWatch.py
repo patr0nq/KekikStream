@@ -1,7 +1,7 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
-from KekikStream.Core import PluginBase, MainPageResult, SearchResult, MovieInfo, SeriesInfo, Episode, ExtractResult, HTMLHelper
-import re, json
+from KekikStream.Core import PluginBase, MainPageResult, SearchResult, SeriesInfo, Episode, ExtractResult, HTMLHelper
+import re
 from urllib.parse import unquote
 
 class DiziWatch(PluginBase):
@@ -151,12 +151,7 @@ class DiziWatch(PluginBase):
         tags_el     = secici.select_text("div.text-sm:nth-child(3) span.text-white:nth-child(3)")
         tags        = [t.strip() for t in tags_el.split(",")] if tags_el else []
 
-        year = None
-        year_text = secici.select_text("div.text-sm:nth-child(2) span.text-white:nth-child(3)")
-        if year_text:
-            y_match = re.search(r"(\d{4})", year_text)
-            if y_match:
-                year = y_match.group(1)
+        year = secici.extract_year("div.text-sm:nth-child(2) span.text-white:nth-child(3)")
 
         episodes = []
         for bolum in secici.select("ul a"):

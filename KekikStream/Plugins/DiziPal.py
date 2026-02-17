@@ -1,6 +1,6 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
-from KekikStream.Core import PluginBase, MainPageResult, SearchResult, MovieInfo, SeriesInfo, Episode, Subtitle, ExtractResult, HTMLHelper
+from KekikStream.Core import PluginBase, MainPageResult, SearchResult, MovieInfo, SeriesInfo, Episode, ExtractResult, HTMLHelper
 
 class DiziPal(PluginBase):
     name        = "DiziPal"
@@ -173,11 +173,11 @@ class DiziPal(PluginBase):
                     for sub in sub_text.split(","):
                         lang = sub.split("[")[1].split("]")[0] if "[" in sub else "Türkçe"
                         sub_url = sub.replace(f"[{lang}]", "")
-                        subtitles.append(Subtitle(name=lang, url=self.fix_url(sub_url)))
+                        subtitles.append(self.new_subtitle(self.fix_url(sub_url), lang))
                 else:
                     lang = sub_text.split("[")[1].split("]")[0] if "[" in sub_text else "Türkçe"
                     sub_url = sub_text.replace(f"[{lang}]", "")
-                    subtitles.append(Subtitle(name=lang, url=self.fix_url(sub_url)))
+                    subtitles.append(self.new_subtitle(self.fix_url(sub_url), lang))
 
             results.append(ExtractResult(
                 name      = self.name,

@@ -1,6 +1,6 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
-from KekikStream.Core import PluginBase, MainPageResult, SearchResult, MovieInfo, SeriesInfo, Episode, ExtractResult, HTMLHelper
+from KekikStream.Core import PluginBase, MainPageResult, SearchResult, MovieInfo, SeriesInfo, Episode, ExtractResult
 import json
 
 class ShowFlix(PluginBase):
@@ -67,7 +67,6 @@ class ShowFlix(PluginBase):
         return results
 
     async def search(self, query: str) -> list[SearchResult]:
-        import asyncio
         results = []
         headers = {
             "X-Parse-Application-Id": self.app_id,
@@ -81,17 +80,21 @@ class ShowFlix(PluginBase):
         else:
             where = {"name": {"$regex": query, "$options": "i"}}
 
-        tasks = []
-        api_mapping = [(self.movie_api, "movie"), (self.tv_api, "tv")]
-        for api_url, _ in api_mapping:
-            params = {
-                "where": json.dumps(where),
-                "limit": 25,
-                "order": "-updatedAt"
-            }
-            tasks.append(self.httpx.get(api_url, params=params, headers=headers))
+        params = {
+            "where": json.dumps(where),
+            "limit": 25,
+            "order": "-updatedAt"
+        }
 
-        responses = await asyncio.gather(*tasks, return_exceptions=True)
+        async def _safe_search(api_url):
+            try:
+                return await self.httpx.get(api_url, params=params, headers=headers)
+            except Exception as e:
+                return e
+
+        api_mapping = [(self.movie_api, "movie"), (self.tv_api, "tv")]
+        tasks = [_safe_search(api_url) for api_url, _ in api_mapping]
+        responses = await self.gather_with_limit(tasks)
 
         for i, resp in enumerate(responses):
             if isinstance(resp, Exception) or resp.status_code != 200:
@@ -203,11 +206,9 @@ class ShowFlix(PluginBase):
                 "vihide": "https://smoothpre.com/v/{}.html"
             }
 
-            for key, template in mapping.items():
-                if val := data.get(key):
-                    res = await self.extract(template.format(val))
-                    if res:
-                        self.collect_results(results, res)
+            tasks = [self.extract(template.format(val)) for key, template in mapping.items() if (val := data.get(key))]
+            for res in await self.gather_with_limit(tasks):
+                self.collect_results(results, res)
 
             if val := data.get("original"):
                  results.append(ExtractResult(name="ShowFlix (Original)", url=val, referer=self.main_url))
@@ -230,11 +231,9 @@ class ShowFlix(PluginBase):
             "vihide": "https://smoothpre.com/v/{}.html"
         }
 
-        for key, template in mapping.items():
-            if val := embeds.get(key):
-                res = await self.extract(template.format(val))
-                if res:
-                    self.collect_results(results, res)
+        tasks = [self.extract(template.format(val)) for key, template in mapping.items() if (val := embeds.get(key))]
+        for res in await self.gather_with_limit(tasks):
+            self.collect_results(results, res)
 
         if val := item.get("originalURL"):
              results.append(ExtractResult(name="ShowFlix (Original)", url=val, referer=self.main_url))

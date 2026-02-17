@@ -1,7 +1,6 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
 from KekikStream.Core import PluginBase, MainPageResult, SearchResult, SeriesInfo, Episode, ExtractResult, HTMLHelper
-import re
 
 class CizgiMax(PluginBase):
     name        = "CizgiMax"
@@ -90,15 +89,8 @@ class CizgiMax(PluginBase):
             if not ep_name or not ep_href:
                 continue
 
-            ep_num = None
-            ep_match = re.search(r"(\d+)\.Bölüm", ep_name)
-            if ep_match:
-                ep_num = int(ep_match.group(1))
-
-            ep_season = 1
-            szn_match = re.search(r"(\d+)\.Sezon", szn_name)
-            if szn_match:
-                ep_season = int(szn_match.group(1))
+            ep_season, ep_num = secici.extract_season_episode(f"{szn_name} {ep_name}")
+            ep_season = ep_season or 1
 
             episodes.append(Episode(
                 season  = ep_season,
@@ -120,18 +112,15 @@ class CizgiMax(PluginBase):
         istek  = await self.httpx.get(url)
         secici = HTMLHelper(istek.text)
 
-        response = []
-
+        iframes = []
         for li in secici.select("ul.linkler li"):
             iframe = li.select_attr("a", "data-frame")
-            if not iframe:
-                continue
+            if iframe:
+                iframes.append(self.fix_url(iframe.strip()))
 
-            iframe = self.fix_url(iframe.strip())
-            try:
-                data = await self.extract(iframe, referer=f"{self.main_url}/")
-                self.collect_results(response, data)
-            except Exception:
-                continue
+        tasks    = [self.extract(url, referer=f"{self.main_url}/") for url in iframes]
+        response = []
+        for data in await self.gather_with_limit(tasks):
+            self.collect_results(response, data)
 
         return self.deduplicate(response)

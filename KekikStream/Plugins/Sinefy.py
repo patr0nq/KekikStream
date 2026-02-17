@@ -1,7 +1,7 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
 from KekikStream.Core import PluginBase, MainPageResult, SearchResult, SeriesInfo, Episode, MovieInfo, ExtractResult, HTMLHelper
-import json, contextlib, asyncio, re
+import json, contextlib, re
 
 class Sinefy(PluginBase):
     name        = "Sinefy"
@@ -218,7 +218,9 @@ class Sinefy(PluginBase):
                 item.name = name
                 item.subtitles.extend(subtitles)
 
-            return items
+            results = []
+            self.collect_results(results, items)
+            return results
         except Exception:
             return []
 
@@ -272,7 +274,7 @@ class Sinefy(PluginBase):
 
         # 2. Kaynakları Paralel İşle
         tasks = [self._process_source(src, subtitles) for src in sources]
-        results_groups = await asyncio.gather(*tasks)
+        results_groups = await self.gather_with_limit(tasks)
 
         # 3. Sonuçları Birleştir
         final_results = []

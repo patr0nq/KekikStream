@@ -1,6 +1,6 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
-from KekikStream.Core import PluginBase, MainPageResult, SearchResult, SeriesInfo, Episode, Subtitle, ExtractResult, HTMLHelper
+from KekikStream.Core import PluginBase, MainPageResult, SearchResult, SeriesInfo, Episode, ExtractResult, HTMLHelper
 
 class DiziYou(PluginBase):
     name        = "DiziYou"
@@ -120,9 +120,9 @@ class DiziYou(PluginBase):
         subtitles = []
         for sub in [("turkceAltyazili", "tr", "Türkçe"), ("ingilizceAltyazili", "en", "İngilizce")]:
             if secici.select_first(f"span#{sub[0]}"):
-                subtitles.append(Subtitle(
-                    name = f"{sub[2]} Altyazı",
-                    url  = f"{base_storage}/subtitles/{item_id}/{sub[1]}.vtt"
+                subtitles.append(self.new_subtitle(
+                    f"{base_storage}/subtitles/{item_id}/{sub[1]}.vtt",
+                    f"{sub[2]} Altyazı"
                 ))
 
         results = []

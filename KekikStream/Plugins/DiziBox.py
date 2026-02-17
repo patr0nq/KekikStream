@@ -190,10 +190,9 @@ class DiziBox(PluginBase):
 
         if main_iframe:
             if decoded := await self._iframe_decode(self.name, main_iframe, url):
-                for iframe in decoded:
-                    data = await self.extract(iframe, name_override=current_source_name)
-                    if data:
-                        results.append(data)
+                tasks = [self.extract(iframe, name_override=current_source_name) for iframe in decoded]
+                for data in await self.gather_with_limit(tasks):
+                    self.collect_results(results, data)
 
         for alternatif in secici.select("div.video-toolbar option[value]"):
             alt_name = alternatif.select_text(None)
@@ -211,9 +210,8 @@ class DiziBox(PluginBase):
 
             if alt_iframe:
                 if decoded := await self._iframe_decode(alt_name, alt_iframe, url):
-                    for iframe in decoded:
-                        data = await self.extract(iframe, name_override=alt_name)
-                        if data:
-                            results.append(data)
+                    tasks = [self.extract(iframe, name_override=alt_name) for iframe in decoded]
+                    for data in await self.gather_with_limit(tasks):
+                        self.collect_results(results, data)
 
         return results

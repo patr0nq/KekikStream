@@ -1,7 +1,7 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
 from KekikStream.Core import PluginBase, MainPageResult, SearchResult, MovieInfo, SeriesInfo, Episode, ExtractResult, HTMLHelper
-import json, re
+import re
 from urllib.parse import urlparse, parse_qs
 
 class JetFilmizle(PluginBase):
@@ -204,7 +204,7 @@ class JetFilmizle(PluginBase):
         if not film_id:
             return []
 
-        response = []
+        btn_data = []
         for btn in secici.select("button.player-source-btn"):
             p_type  = btn.attrs.get("data-player-type") or btn.attrs.get("data-player-group")
             s_index = btn.attrs.get("data-source-index")
@@ -213,29 +213,26 @@ class JetFilmizle(PluginBase):
             # Episode filtering for series
             if target_epis is not None and (s_index != target_epis or p_type != target_type):
                 continue
+            btn_data.append((p_type, s_index, label))
 
-            oyun_istek = await self.httpx.post(
-                url     = f"{self.main_url}/jetplayer",
-                data    = {
-                    "film_id": film_id,
-                    "source_index": s_index,
-                    "player_type": p_type
-                },
-                headers = {
-                    "Content-Type": "application/x-www-form-urlencoded",
-                    "X-Requested-With": "XMLHttpRequest",
-                    "Referer": url
-                }
-            )
+        async def _fetch_and_extract(p_type, s_index, label):
+            try:
+                oyun_istek = await self.httpx.post(
+                    url     = f"{self.main_url}/jetplayer",
+                    data    = {"film_id": film_id, "source_index": s_index, "player_type": p_type},
+                    headers = {"Content-Type": "application/x-www-form-urlencoded", "X-Requested-With": "XMLHttpRequest", "Referer": url}
+                )
+                if oyun_istek.status_code == 200:
+                    src = HTMLHelper(oyun_istek.text).select_attr("iframe", "src")
+                    if src:
+                        return await self.extract(self.fix_url(src), prefix=f"[{p_type.upper()}] {label}")
+            except Exception:
+                pass
+            return None
 
-            if oyun_istek.status_code == 200:
-                iframe_secici = HTMLHelper(oyun_istek.text)
-                src = iframe_secici.select_attr("iframe", "src")
-                if src:
-                    src = self.fix_url(src)
-                    prefix = f"[{p_type.upper()}] {label}"
-                    data = await self.extract(src, prefix=prefix)
-                    if data:
-                        self.collect_results(response, data)
+        tasks    = [_fetch_and_extract(pt, si, lb) for pt, si, lb in btn_data]
+        response = []
+        for data in await self.gather_with_limit(tasks):
+            self.collect_results(response, data)
 
         return response

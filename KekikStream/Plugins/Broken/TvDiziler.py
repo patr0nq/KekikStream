@@ -178,33 +178,31 @@ class TvDiziler(PluginBase):
 
         # Tüm butonlardan data-hhs topla (aktif + alternatifler)
         seen_srcs = set()
+        src_list  = []
         for btn in secici.select("button[data-hhs]"):
             src = btn.select_attr(None, "data-hhs")
             if not src or src in seen_srcs:
                 continue
             seen_srcs.add(src)
-
             src = self.fix_url(src)
-
-            # YouTube ise atla
             if "youtube.com" in src:
                 continue
+            src_list.append(src)
 
-            # iframe sayfasını getir ve sources[] parse et
+        async def _process_src(src):
+            part_results = []
             try:
                 if_resp = await self.httpx.get(src, headers=headers)
-
                 script_match = re.search(r"sources:\s*\[(\{[^]]+)\]", if_resp.text)
                 if script_match:
                     raw = script_match.group(1)
                     raw = re.sub(r'(?<!["\w])(\w+)(?=\s*:)', r'"\1"', raw)
                     raw = raw.replace("'", '"')
-
                     try:
                         source   = json.loads(raw)
                         file_url = source.get("file", "")
                         if file_url:
-                            response.append(ExtractResult(
+                            part_results.append(ExtractResult(
                                 name    = self.name,
                                 url     = file_url,
                                 referer = f"{self.main_url}/",
@@ -216,7 +214,12 @@ class TvDiziler(PluginBase):
 
             # Fallback: extractor
             data = await self.extract(src, referer=f"{self.main_url}/")
-            self.collect_results(response, data)
+            self.collect_results(part_results, data)
+            return part_results
+
+        tasks = [_process_src(src) for src in src_list]
+        for result_list in await self.gather_with_limit(tasks):
+            response.extend(result_list)
 
         # Eğer hiç buton yoksa, eski fallback
         if not seen_srcs:

@@ -120,8 +120,10 @@ class Sinezy(PluginBase):
                 if iframe:
                     iframe = self.fix_url(iframe)
                     data = await self.extract(iframe, name_override=name)
-                    if data:
-                        return [data]
+                    results = []
+                    self.collect_results(results, data)
+                    if results:
+                        return results
             except Exception:
                 pass
 

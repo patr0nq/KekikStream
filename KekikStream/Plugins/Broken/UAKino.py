@@ -186,10 +186,12 @@ class UAKino(PluginBase):
         playlist_html = await self._fetch_playlist(news_id, xfname, edittime)
         if playlist_html:
             items = self._parse_playlist_items(playlist_html)
-            for item in items:
-                ext = await self.extract(item["file"], referer=f"{self.main_url}/", name_override=f"{self.name} | {item['voice']}" if item["voice"] else None)
-                if ext:
-                    self.collect_results(results, ext)
+            tasks = [
+                self.extract(item["file"], referer=f"{self.main_url}/", name_override=f"{self.name} | {item['voice']}" if item["voice"] else None)
+                for item in items
+            ]
+            for ext in await self.gather_with_limit(tasks):
+                self.collect_results(results, ext)
 
         # iframe#pre fallback
         if not results:

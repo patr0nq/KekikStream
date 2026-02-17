@@ -2,7 +2,7 @@
 
 from KekikStream.Core import PluginBase, MainPageResult, SearchResult, SeriesInfo, Episode, ExtractResult, HTMLHelper
 from Kekik.Sifreleme  import AESManager
-import re, json, base64
+import re, base64
 
 class TurkAnime(PluginBase):
     name        = "TurkAnime"
@@ -226,16 +226,16 @@ class TurkAnime(PluginBase):
         is_ad       = iframe_src and "a-ads.com" in iframe_src
 
         # button onclick → ajax/videosec → alternatif kaynaklar
+        sub_links = []
         for button in secici.select("button[onclick*='ajax/videosec']"):
             onclick = button.attrs.get("onclick", "")
             if not onclick:
                 continue
-
             sub_link_match = re.search(r"IndexIcerik\('([^']+)'\)", onclick)
-            if not sub_link_match:
-                continue
+            if sub_link_match:
+                sub_links.append(self.fix_url(sub_link_match.group(1)))
 
-            sub_link = self.fix_url(sub_link_match.group(1))
+        async def _process_sub_link(sub_link):
             try:
                 sub_resp   = await self.httpx.get(sub_link, headers={"X-Requested-With": "XMLHttpRequest"})
                 sub_secici = HTMLHelper(sub_resp.text)
@@ -243,27 +243,26 @@ class TurkAnime(PluginBase):
                 # Artplayer data-url kontrol (m3u8 direkt link)
                 data_url = sub_secici.select_attr("div.artplayer-app", "data-url")
                 if data_url and data_url.endswith(".m3u8"):
-                    response.append(ExtractResult(
-                        name    = "TurkAnime",
-                        url     = data_url,
-                        referer = sub_link,
-                    ))
-                    continue
+                    return [ExtractResult(name="TurkAnime", url=data_url, referer=sub_link)]
 
                 # İframe → AES decode → extractor veya internal player
                 sub_iframe = sub_secici.select_attr("iframe", "src")
                 if sub_iframe:
                     real_url = self._iframe_to_aes_link(sub_iframe)
                     if real_url:
-                        # turkanime.tv/player/ URL'leri → dahili sources API
                         if "turkanime.tv/player/" in real_url:
-                            player_results = await self._player_sources(real_url)
-                            response.extend(player_results)
+                            return await self._player_sources(real_url)
                         else:
                             data = await self.extract(real_url, referer=f"{self.main_url}/")
-                            self.collect_results(response, data)
+                            return [data] if data else []
             except Exception:
-                continue
+                pass
+            return []
+
+        all_results = await self.gather_with_limit([_process_sub_link(link) for link in sub_links])
+        for result_list in all_results:
+            if result_list:
+                response.extend(result_list)
 
         # İlk iframe (reklam değilse)
         if iframe_src and not is_ad:

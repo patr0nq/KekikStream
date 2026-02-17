@@ -1,7 +1,7 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
 from KekikStream.Core import PluginBase, MainPageResult, SearchResult, MovieInfo, SeriesInfo, Episode, ExtractResult, HTMLHelper
-import asyncio, base64, re, json
+import base64, re, json
 
 class Coflix(PluginBase):
     name        = "Coflix"
@@ -200,13 +200,8 @@ class Coflix(PluginBase):
 
         results.extend(ExtractResult(name=self.name, url=u) for u in direct)
 
-        extract_results = await asyncio.gather(
-            *(self.extract(u, referer=self.main_url) for u in embed),
-            return_exceptions=True
-        )
-        for ext in extract_results:
-            if isinstance(ext, BaseException) or ext is None:
-                continue
+        tasks = [self.extract(u, referer=self.main_url) for u in embed]
+        for ext in await self.gather_with_limit(tasks):
             self.collect_results(results, ext)
 
         return results

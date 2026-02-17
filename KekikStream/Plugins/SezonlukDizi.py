@@ -1,7 +1,7 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
 from KekikStream.Core import PluginBase, MainPageResult, SearchResult, SeriesInfo, Episode, ExtractResult, HTMLHelper
-import asyncio, contextlib
+import contextlib
 
 class SezonlukDizi(PluginBase):
     name        = "SezonlukDizi"
@@ -144,12 +144,10 @@ class SezonlukDizi(PluginBase):
         if not bid:
             return []
 
-        semaphore = asyncio.Semaphore(5)
         tasks = []
 
         async def fetch_and_extract(veri, dil_etiketi) -> list[ExtractResult]:
-            async with semaphore:
-                try:
+            try:
                     embed_resp = await self.httpx.post(
                         url     = f"{self.main_url}/ajax/dataEmbed{asp_data['embed']}.asp",
                         headers = {"X-Requested-With": "XMLHttpRequest"},
@@ -177,15 +175,16 @@ class SezonlukDizi(PluginBase):
                     if not extracted:
                          return []
 
-                    results = []
-                    items   = extracted if isinstance(extracted, list) else [extracted]
+                    items = extracted if isinstance(extracted, list) else [extracted]
                     for item in items:
                         item.name = full_name
-                        results.append(item)
+
+                    results = []
+                    self.collect_results(results, items)
                     return results
 
-                except Exception:
-                    return []
+            except Exception:
+                return []
 
         for dil_kodu, dil_etiketi in [("1", "Altyazı"), ("0", "Dublaj")]:
             with contextlib.suppress(Exception):
@@ -200,7 +199,7 @@ class SezonlukDizi(PluginBase):
                     for veri in data_json["data"]:
                         tasks.append(fetch_and_extract(veri, dil_etiketi))
 
-        results_groups = await asyncio.gather(*tasks)
+        results_groups = await self.gather_with_limit(tasks)
 
         final_results = []
         for group in results_groups:

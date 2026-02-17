@@ -1,6 +1,6 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
-from KekikStream.Core import PluginBase, MainPageResult, SearchResult, MovieInfo, Subtitle, ExtractResult, HTMLHelper
+from KekikStream.Core import PluginBase, MainPageResult, SearchResult, MovieInfo, ExtractResult, HTMLHelper
 
 class FilmModu(PluginBase):
     name        = "FilmModu"
@@ -141,7 +141,7 @@ class FilmModu(PluginBase):
                     name      = f"{self.name} | {alt_name} | {source.get('label', 'Bilinmiyor')}",
                     url       = self.fix_url(source["src"]),
                     referer   = f"{self.main_url}/",
-                    subtitles = [Subtitle(name="Türkçe", url=subtitle_url)] if subtitle_url else []
+                    subtitles = [self.new_subtitle(subtitle_url, "Türkçe")] if subtitle_url else []
                 ))
 
         return results

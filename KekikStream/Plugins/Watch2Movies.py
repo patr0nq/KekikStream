@@ -110,23 +110,28 @@ class Watch2Movies(PluginBase):
         istek  = await self.httpx.get(f"{self.main_url}/ajax/episode/list/{ep_id}", headers={"Referer": url})
         secici = HTMLHelper(istek.text)
 
-        response = []
+        data_ids = []
         for link in secici.select("li.nav-item a"):
             data_id = link.attrs.get("data-id", "")
-            if not data_id:
-                continue
+            if data_id:
+                data_ids.append(data_id)
 
+        async def _fetch_and_extract(data_id):
             try:
-                src_resp   = await self.httpx.get(
+                src_resp = await self.httpx.get(
                     f"{self.main_url}/ajax/episode/sources/{data_id}",
                     headers = {"X-Requested-With": "XMLHttpRequest", "Referer": url},
                 )
-                src_data   = src_resp.json()
-                embed_link = src_data.get("link", "")
+                embed_link = src_resp.json().get("link", "")
                 if embed_link:
-                    data = await self.extract(embed_link, referer=f"{self.main_url}/")
-                    self.collect_results(response, data)
+                    return await self.extract(embed_link, referer=f"{self.main_url}/")
             except Exception:
-                continue
+                pass
+            return None
+
+        tasks    = [_fetch_and_extract(did) for did in data_ids]
+        response = []
+        for data in await self.gather_with_limit(tasks):
+            self.collect_results(response, data)
 
         return response

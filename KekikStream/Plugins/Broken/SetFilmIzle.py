@@ -1,7 +1,7 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
 from KekikStream.Core import PluginBase, MainPageResult, SearchResult, MovieInfo, SeriesInfo, Episode, ExtractResult, HTMLHelper
-import asyncio, contextlib
+import contextlib
 
 class SetFilmIzle(PluginBase):
     name        = "SetFilmIzle"
@@ -171,63 +171,59 @@ class SetFilmIzle(PluginBase):
             "orijinal"      : "Orijinal"
         }
 
-        semaphore = asyncio.Semaphore(5)
         tasks = []
 
         async def fetch_and_extract(player) -> list[ExtractResult]:
-            async with semaphore:
-                source_id   = player.attrs.get("data-post-id")
-                player_name = player.attrs.get("data-player-name") or player.select_text("b")
-                part_key    = player.attrs.get("data-part-key")
+            source_id   = player.attrs.get("data-post-id")
+            player_name = player.attrs.get("data-player-name") or player.select_text("b")
+            part_key    = player.attrs.get("data-part-key")
 
-                if not source_id or "event" in source_id or source_id == "":
-                    return []
+            if not source_id or "event" in source_id or source_id == "":
+                return []
 
-                try:
-                    resp = await self.async_cf_post(
-                        f"{self.main_url}/wp-admin/admin-ajax.php",
-                        headers = {"Referer": url},
-                        data    = {
-                            "action"      : "get_video_url",
-                            "nonce"       : nonce,
-                            "post_id"     : source_id,
-                            "player_name" : player.attrs.get("data-player-name") or "",
-                            "part_key"    : part_key or ""
-                        }
-                    )
-                    data = resp.json()
-                except Exception:
-                    return []
+            try:
+                resp = await self.async_cf_post(
+                    f"{self.main_url}/wp-admin/admin-ajax.php",
+                    headers = {"Referer": url},
+                    data    = {
+                        "action"      : "get_video_url",
+                        "nonce"       : nonce,
+                        "post_id"     : source_id,
+                        "player_name" : player.attrs.get("data-player-name") or "",
+                        "part_key"    : part_key or ""
+                    }
+                )
+                data = resp.json()
+            except Exception:
+                return []
 
-                iframe_url = data.get("data", {}).get("url")
-                if not iframe_url:
-                    return []
+            iframe_url = data.get("data", {}).get("url")
+            if not iframe_url:
+                return []
 
-                if "setplay" not in iframe_url and part_key:
-                    iframe_url = f"{iframe_url}?partKey={part_key}"
+            if "setplay" not in iframe_url and part_key:
+                iframe_url = f"{iframe_url}?partKey={part_key}"
 
-                label = part_key_labels.get(part_key, "")
-                if not label and part_key:
-                    label = part_key.replace("_", " ").title()
+            label = part_key_labels.get(part_key, "")
+            if not label and part_key:
+                label = part_key.replace("_", " ").title()
 
-                # İsimlendirme Formatı: "FastPlay | Türkçe Dublaj"
-                final_name = player_name
-                if label:
-                    final_name = f"{final_name} | {label}" if final_name else label
+            final_name = player_name
+            if label:
+                final_name = f"{final_name} | {label}" if final_name else label
 
-                # Extract et
-                extracted = await self.extract(iframe_url)
-                if not extracted:
-                    return []
+            extracted = await self.extract(iframe_url)
+            if not extracted:
+                return []
 
-                results = []
-                items = extracted if isinstance(extracted, list) else [extracted]
-                for item in items:
-                    if final_name:
-                        item.name = final_name
-                    results.append(item)
+            results = []
+            items = extracted if isinstance(extracted, list) else [extracted]
+            for item in items:
+                if final_name:
+                    item.name = final_name
+                results.append(item)
 
-                return results
+            return results
 
         # Selector Güncellemesi: data-player-name içeren tüm a tagleri
         players = secici.select("a[data-player-name]")
@@ -238,7 +234,7 @@ class SetFilmIzle(PluginBase):
         for player in players:
             tasks.append(fetch_and_extract(player))
 
-        results_groups = await asyncio.gather(*tasks)
+        results_groups = await self.gather_with_limit(tasks)
 
         # Flatten
         final_results = []

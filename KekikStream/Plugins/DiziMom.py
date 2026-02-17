@@ -153,21 +153,16 @@ class DiziMom(PluginBase):
                 if sub_iframe:
                     iframe_data.append((sub_iframe, name or f"{len(iframe_data)+1}.Kısım"))
 
-        results = []
-        for iframe_url, source_name in iframe_data:
-            # URL düzeltme
+        async def _extract_or_fallback(iframe_url, source_name):
             iframe_url = self.fix_url(iframe_url)
+            result = await self.extract(iframe_url, prefix=source_name)
+            if result:
+                return result
+            return ExtractResult(url=iframe_url, name=f"{source_name} | External", referer=self.main_url)
 
-            # Prefix olarak kaynak adını kullan (1.Kısım | HDMomPlayer)
-            extract_result = await self.extract(iframe_url, prefix=source_name)
-
-            if extract_result:
-                self.collect_results(results, extract_result)
-            else:
-                 results.append(ExtractResult(
-                    url     = iframe_url,
-                    name    = f"{source_name} | External",
-                    referer = self.main_url
-                ))
+        tasks   = [_extract_or_fallback(url, name) for url, name in iframe_data]
+        results = []
+        for data in await self.gather_with_limit(tasks):
+            self.collect_results(results, data)
 
         return results

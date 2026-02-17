@@ -1,7 +1,7 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
 from KekikStream.Core import PluginBase, MainPageResult, SearchResult, SeriesInfo, MovieInfo, Episode, ExtractResult, HTMLHelper
-import asyncio, time
+import time
 
 class YabanciDizi(PluginBase):
     name        = "YabanciDizi"
@@ -230,7 +230,7 @@ class YabanciDizi(PluginBase):
                 return []
 
         if tabs:
-            results_groups = await asyncio.gather(*(process_tab(tab) for tab in tabs))
+            results_groups = await self.gather_with_limit([process_tab(tab) for tab in tabs])
             for group in results_groups:
                 results.extend(group)
         else:

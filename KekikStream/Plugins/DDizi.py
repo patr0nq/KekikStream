@@ -157,6 +157,7 @@ class DDizi(PluginBase):
 
                 # file: '...' logic
                 sources = player_secici.regex_all(r'file:\s*["\']([^"\']+)["\']')
+                extract_urls = []
                 for src in sources:
                     src = self.fix_url(src)
                     # Direkt link kontrolü - Extractor gerektirmeyenler
@@ -170,9 +171,11 @@ class DDizi(PluginBase):
                             referer    = "https://twitter.com/"
                         ))
                     else:
-                        res = await self.extract(src, referer=target_url)
-                        if res:
-                            self.collect_results(results, res)
+                        extract_urls.append(src)
+
+                tasks = [self.extract(src, referer=target_url) for src in extract_urls]
+                for res in await self.gather_with_limit(tasks):
+                    self.collect_results(results, res)
 
                 # Fallback to target_url itself if nothing found inside
                 if not results:

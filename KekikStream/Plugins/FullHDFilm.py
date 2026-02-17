@@ -176,24 +176,26 @@ class FullHDFilm(PluginBase):
         secici     = HTMLHelper(istek.text)
         part_names = [el.text(strip=True) for el in secici.select("li.psec a")]
 
-        for idx, (key, value) in enumerate(pdata_list):
-            part_name = part_names[idx] if idx < len(part_names) else ""
-            if "fragman" in part_name.lower() or "fragman" in key.lower():
-                continue
-
+        async def _process_pdata(value, part_name):
             iframe_url = self._iframe_coz(value)
             if not iframe_url:
-                continue
-
+                return None
             iframe_url = self.fix_url(iframe_url)
-
             try:
                 iframe_resp = await self.httpx.get(iframe_url, headers={"Referer": f"{self.main_url}/"})
                 iframe_url  = str(iframe_resp.url)
             except Exception:
-                continue
+                return None
+            return await self.extract(iframe_url, referer=f"{self.main_url}/", prefix=part_name or None)
 
-            data = await self.extract(iframe_url, referer=f"{self.main_url}/", prefix=part_name or None)
+        pdata_tasks = []
+        for idx, (key, value) in enumerate(pdata_list):
+            part_name = part_names[idx] if idx < len(part_names) else ""
+            if "fragman" in part_name.lower() or "fragman" in key.lower():
+                continue
+            pdata_tasks.append(_process_pdata(value, part_name))
+
+        for data in await self.gather_with_limit(pdata_tasks):
             self.collect_results(response, data)
 
         return response

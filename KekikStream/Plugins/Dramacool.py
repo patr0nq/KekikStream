@@ -1,6 +1,6 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
-from KekikStream.Core import PluginBase, MainPageResult, SearchResult, SeriesInfo, Episode, ExtractResult, Subtitle, HTMLHelper
+from KekikStream.Core import PluginBase, MainPageResult, SearchResult, SeriesInfo, Episode, ExtractResult, HTMLHelper
 from Kekik.Sifreleme  import Packer
 import re, base64
 
@@ -186,33 +186,37 @@ class Dramacool(PluginBase):
 
         response = []
 
+        async def _process_iframe(src):
+            if "asianload" in src:
+                return await self._extract_asianload(src)
+            return await self.extract(src, referer=url)
+
+        iframe_srcs = []
         for iframe in secici.select("iframe"):
             src = iframe.select_attr(None, "src")
             if not src:
                 continue
-
             if src.startswith("//"):
                 src = f"https:{src}"
+            iframe_srcs.append(src)
 
-            if "asianload" in src:
-                data = await self._extract_asianload(src)
-                self.collect_results(response, data)
-            elif "asianembed" in src:
-                data = await self.extract(src, referer=url)
-                self.collect_results(response, data)
-            else:
-                data = await self.extract(src, referer=url)
-                self.collect_results(response, data)
+        tasks = [_process_iframe(src) for src in iframe_srcs]
+        for data in await self.gather_with_limit(tasks):
+            self.collect_results(response, data)
 
         # div.watch-iframe iframe fallback
         if not response:
+            fallback_srcs = []
             for iframe in secici.select("div.watch-iframe iframe"):
                 src = iframe.select_attr(None, "src")
                 if not src:
                     continue
                 if src.startswith("//"):
                     src = f"https:{src}"
-                data = await self.extract(src, referer=url)
+                fallback_srcs.append(src)
+
+            tasks = [self.extract(src, referer=url) for src in fallback_srcs]
+            for data in await self.gather_with_limit(tasks):
                 self.collect_results(response, data)
 
         return self.deduplicate(response)

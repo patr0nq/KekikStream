@@ -1,6 +1,6 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
-from KekikStream.Core import PluginBase, MainPageResult, SearchResult, MovieInfo, ExtractResult, Subtitle, HTMLHelper
+from KekikStream.Core import PluginBase, MainPageResult, SearchResult, MovieInfo, ExtractResult, HTMLHelper
 import re, json
 
 class FilmKovasi(PluginBase):
@@ -158,7 +158,7 @@ class FilmKovasi(PluginBase):
                 tracks_raw = self._add_marks(tracks_raw, "kind")
                 track_file = re.search(r'"file"\s*:\s*"([^"]+)"', tracks_raw)
                 if track_file:
-                    subtitle = Subtitle(name="Türkçe Altyazı", url=track_file.group(1))
+                    subtitle = self.new_subtitle(track_file.group(1), "Türkçe Altyazı")
 
             result = ExtractResult(name=self.name, url=son_link, referer=iframe_url)
             if subtitle:
@@ -186,11 +186,7 @@ class FilmKovasi(PluginBase):
                 self.collect_results(response, data)
 
         # Alternatif kaynaklar
-        for link in secici.select("div.sources a"):
-            alt_href = link.attrs.get("href", "")
-            if not alt_href:
-                continue
-
+        async def _process_alt(alt_href):
             try:
                 alt_resp   = await self.httpx.get(self.fix_url(alt_href))
                 alt_secici = HTMLHelper(alt_resp.text)
@@ -201,8 +197,14 @@ class FilmKovasi(PluginBase):
                         data = await self._extract_custom_player(alt_url)
                         if not data:
                             data = await self.extract(alt_url, referer=f"{self.main_url}/")
-                        self.collect_results(response, data)
+                        return data
             except Exception:
                 pass
+            return None
+
+        alt_hrefs = [link.attrs.get("href", "") for link in secici.select("div.sources a") if link.attrs.get("href", "")]
+        tasks     = [_process_alt(href) for href in alt_hrefs]
+        for data in await self.gather_with_limit(tasks):
+            self.collect_results(response, data)
 
         return response

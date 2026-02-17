@@ -1,7 +1,6 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
 from KekikStream.Core import PluginBase, MainPageResult, SearchResult, MovieInfo, ExtractResult, HTMLHelper
-import asyncio
 
 class SuperFilmIzle(PluginBase):
     name        = "SuperFilmIzle"
@@ -156,17 +155,17 @@ class SuperFilmIzle(PluginBase):
                     iframes.append(self.fix_url(src))
 
             # Bulunan iframeleri extract et (prefix olarak parça adını ekle)
+            tasks = [self.extract(ifr_url, prefix=src_name or None) for ifr_url in iframes]
             results = []
-            for ifr_url in iframes:
-                if extracted := await self.extract(ifr_url, prefix=src_name or None):
-                    self.collect_results(results, extracted)
+            for extracted in await self.gather_with_limit(tasks):
+                self.collect_results(results, extracted)
             return results
 
         for src in sources:
             extract_tasks.append(process_task(src))
 
         # 3. Tüm Görevleri Paralel Çalıştır ve Sonuçları Topla
-        results_groups = await asyncio.gather(*extract_tasks)
+        results_groups = await self.gather_with_limit(extract_tasks)
 
         final_results = []
         for group in results_groups:

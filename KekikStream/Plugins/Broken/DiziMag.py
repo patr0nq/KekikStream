@@ -1,6 +1,6 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
-from KekikStream.Core import PluginBase, MainPageResult, SearchResult, MovieInfo, SeriesInfo, Episode, ExtractResult, Subtitle, HTMLHelper
+from KekikStream.Core import PluginBase, MainPageResult, SearchResult, MovieInfo, SeriesInfo, Episode, ExtractResult, HTMLHelper
 from Kekik.Sifreleme  import AESManager
 import re, json
 
@@ -191,7 +191,7 @@ class DiziMag(PluginBase):
                     sub_file  = sub.get("file", "")
                     sub_label = sub.get("label", "")
                     if sub_file and "Forced" not in sub_label:
-                        subtitles.append(Subtitle(name=sub_label, url=self.fix_url(sub_file)))
+                        subtitles.append(self.new_subtitle(self.fix_url(sub_file), sub_label))
 
                 if m3u8_url:
                     response.append(ExtractResult(

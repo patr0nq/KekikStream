@@ -113,11 +113,8 @@ class YeniWatch(PluginBase):
             if not ep_href or not ep_title:
                 continue
 
-            se_match = re.search(r"(\d+)\.\s*Sezon\s*(\d+)\.\s*Bölüm", ep_title)
-            if se_match:
-                szn = int(se_match.group(1))
-                blm = int(se_match.group(2))
-                if szn > 0:
+            szn, blm = secici.extract_season_episode(ep_title)
+            if szn and blm and szn > 0:
                     episodes.append(Episode(
                         season  = szn,
                         episode = blm,

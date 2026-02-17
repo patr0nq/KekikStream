@@ -174,8 +174,8 @@ class RoketDizi(PluginBase):
 
             sources = decoded_json.get("RelatedResults", {}).get("getEpisodeSources", {}).get("result", [])
 
-            seen_urls = set()
-            results = []
+            seen_urls   = set()
+            iframe_urls = []
             for source in sources:
                 source_content = source.get("source_content", "")
 
@@ -197,9 +197,11 @@ class RoketDizi(PluginBase):
                 if iframe_url in seen_urls:
                     continue
                 seen_urls.add(iframe_url)
+                iframe_urls.append(iframe_url)
 
-                # Extract with helper
-                data = await self.extract(iframe_url)
+            tasks   = [self.extract(url) for url in iframe_urls]
+            results = []
+            for data in await self.gather_with_limit(tasks):
                 self.collect_results(results, data)
 
             return results

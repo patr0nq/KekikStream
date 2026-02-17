@@ -1,7 +1,7 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
-from KekikStream.Core import HTMLHelper, PluginBase, MainPageResult, SearchResult, MovieInfo, Episode, SeriesInfo, Subtitle, ExtractResult
-import base64, asyncio, contextlib
+from KekikStream.Core import HTMLHelper, PluginBase, MainPageResult, SearchResult, MovieInfo, Episode, SeriesInfo, ExtractResult
+import base64, contextlib
 
 class HDFilm(PluginBase):
     name        = "HDFilm"
@@ -195,12 +195,12 @@ class HDFilm(PluginBase):
             if iframe_src:
                 data = await self.extract(iframe_src, name_override=final_name)
                 if data:
-                    sub   = Subtitle(name="Türkçe", url=subtitle_url) if subtitle_url else None
-                    items = data if isinstance(data, list) else [data]
-                    for d in items:
-                        if sub:
+                    sub = self.new_subtitle(subtitle_url, "Türkçe") if subtitle_url else None
+                    if sub:
+                        items = data if isinstance(data, list) else [data]
+                        for d in items:
                             d.subtitles.append(sub)
-                        results.append(d)
+                    self.collect_results(results, data)
 
             return results
         except Exception:
@@ -239,4 +239,4 @@ class HDFilm(PluginBase):
 
             tasks.append(self._get_source_links(p_url, initial_text if use_initial else None))
 
-        return [item for sublist in await asyncio.gather(*tasks) for item in sublist]
+        return [item for sublist in await self.gather_with_limit(tasks) for item in sublist]

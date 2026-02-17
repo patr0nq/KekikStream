@@ -122,24 +122,8 @@ class Filmatek(PluginBase):
             else:
                  options = []
 
-        results = []
-        for opt in options:
-            if isinstance(opt, dict):
-                post_id = opt.get("data-post")
-                nume    = opt.get("data-nume")
-                type_   = opt.get("data-type")
-                title   = opt.get("title")
-            else:
-                post_id = opt.attrs.get("data-post")
-                nume    = opt.attrs.get("data-nume")
-                type_   = opt.attrs.get("data-type")
-                title   = opt.select_text("span.title")
-
-            if not post_id or not nume:
-                continue
-
+        async def _process_option(post_id, nume, type_, title):
             try:
-                # Need to use post with data
                 player_resp = await self.httpx.post(
                     url     = f"{self.main_url}/wp-admin/admin-ajax.php",
                     headers = {
@@ -172,23 +156,27 @@ class Filmatek(PluginBase):
 
                     # Direct media files
                     if ".m3u8" in iframe_url or ".mp4" in iframe_url:
-                        results.append(ExtractResult(
-                            name    = f"{title} | Direct",
-                            url     = iframe_url,
-                            referer = url
-                        ))
+                        return [ExtractResult(name=f"{title} | Direct", url=iframe_url, referer=url)]
                     else:
                         extracted = await self.extract(iframe_url, prefix=title)
                         if extracted:
-                            self.collect_results(results, extracted)
+                            return extracted if isinstance(extracted, list) else [extracted]
                         else:
-                            results.append(ExtractResult(
-                                name    = f"{title} | External",
-                                url     = iframe_url,
-                                referer = url
-                            ))
-            except Exception as e:
-                # print(f"Filmatek Error: {e}")
+                            return [ExtractResult(name=f"{title} | External", url=iframe_url, referer=url)]
+            except Exception:
                 pass
+            return []
+
+        opt_data = []
+        for opt in options:
+            if isinstance(opt, dict):
+                opt_data.append((opt.get("data-post"), opt.get("data-nume"), opt.get("data-type"), opt.get("title")))
+            else:
+                opt_data.append((opt.attrs.get("data-post"), opt.attrs.get("data-nume"), opt.attrs.get("data-type"), opt.select_text("span.title")))
+
+        tasks   = [_process_option(pid, num, typ, ttl) for pid, num, typ, ttl in opt_data if pid and num]
+        results = []
+        for result_list in await self.gather_with_limit(tasks):
+            results.extend(result_list)
 
         return results

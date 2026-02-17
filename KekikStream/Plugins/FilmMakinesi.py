@@ -137,16 +137,18 @@ class FilmMakinesi(PluginBase):
         istek  = await self.httpx.get(url)
         secici = HTMLHelper(istek.text)
 
-        response = []
-
         # Video parts linklerini ve etiketlerini al
+        parts = []
         for link in secici.select("div.video-parts a[data-video_url]"):
             video_url = link.attrs.get("data-video_url")
             label     = link.text(strip=True) if link.text(strip=True) else ""
-
             if video_url:
-                data = await self.extract(video_url, prefix=label.split()[0] if label else None)
-                self.collect_results(response, data)
+                parts.append((video_url, label.split()[0] if label else None))
+
+        tasks    = [self.extract(url, prefix=lbl) for url, lbl in parts]
+        response = []
+        for data in await self.gather_with_limit(tasks):
+            self.collect_results(response, data)
 
         # Eğer video-parts yoksa iframe kullan
         if not response:

@@ -1,7 +1,7 @@
 # Bu araç @keyiflerolsun tarafından | @KekikAkademi için yazılmıştır.
 
 from KekikStream.Core import PluginBase, MainPageResult, SearchResult, MovieInfo, SeriesInfo, Episode, ExtractResult, HTMLHelper
-import re, json
+import re
 
 class WebDramaTurkey(PluginBase):
     name        = "WebDramaTurkey"
@@ -100,12 +100,7 @@ class WebDramaTurkey(PluginBase):
         description = secici.select_text("div.text-content") or secici.select_text("div.video-attr:nth-child(4) > div:nth-child(2)")
         tags        = secici.select_texts("div.categories a") or secici.select_texts("div.category a")
 
-        year = None
-        year_text = secici.select_text("div.featured-attr:nth-child(1) > div:nth-child(2)") or secici.select_text("div.video-attr:nth-child(3) > div:nth-child(2)")
-        if year_text:
-            y_match = re.search(r"(\d{4})", year_text)
-            if y_match:
-                year = y_match.group(1)
+        year = secici.extract_year("div.featured-attr:nth-child(1) > div:nth-child(2)", "div.video-attr:nth-child(3) > div:nth-child(2)")
 
         if "/film/" in url:
             return MovieInfo(
@@ -200,7 +195,7 @@ class WebDramaTurkey(PluginBase):
             if eid and eid not in embed_ids:
                 embed_ids.append(eid)
 
-        for eid in embed_ids:
+        async def _process_embed(eid):
             try:
                 resp = await self.httpx.post(
                     f"{self.main_url}/ajax/embed",
@@ -215,7 +210,7 @@ class WebDramaTurkey(PluginBase):
                 embed_secici = HTMLHelper(resp.text)
                 iframe_src   = embed_secici.select_attr("iframe", "src")
                 if not iframe_src:
-                    continue
+                    return None
 
                 # İkinci iframe katmanı
                 if_resp = await self.httpx.get(iframe_src, headers={"Referer": url})
@@ -229,12 +224,15 @@ class WebDramaTurkey(PluginBase):
                 final_src = self.fix_url(final_src)
 
                 if "dtpasn.asia/video/" in final_src:
-                    data = await self._handle_dtpasn(final_src, url)
-                    self.collect_results(response, data)
+                    return await self._handle_dtpasn(final_src, url)
                 else:
-                    data = await self.extract(final_src, referer=f"{self.main_url}/")
-                    self.collect_results(response, data)
+                    return await self.extract(final_src, referer=f"{self.main_url}/")
             except Exception:
-                continue
+                return None
+
+        tasks    = [_process_embed(eid) for eid in embed_ids]
+        response = []
+        for data in await self.gather_with_limit(tasks):
+            self.collect_results(response, data)
 
         return self.deduplicate(response)
