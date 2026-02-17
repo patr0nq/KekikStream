@@ -7,7 +7,7 @@ class RealFilmIzle(PluginBase):
     language    = "tr"
     main_url    = "https://filmizlefullhd.live"
     favicon     = f"https://www.google.com/s2/favicons?domain={main_url}&sz=64"
-    description = "realfilmizle.com, sinemayı seven kullanıcılar için hazırlanmış, zengin içerik yapısına sahip bir online film izleme sitesidir."
+    description = "Film Makinesi ile en yeni filmleri online Türkçe dublaj Full HD izleyin. Aksiyon, komedi, korku ve dram kategorilerinde kesintisiz film keyfi burada!"
 
     main_page   = {
         f"{main_url}/dizi/aile-filmleri/page"        : "Aile",

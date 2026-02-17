@@ -7,7 +7,7 @@ class DiziPal(PluginBase):
     language    = "tr"
     main_url    = "https://dizipal.cx"
     favicon     = f"https://www.google.com/s2/favicons?domain={main_url}&sz=64"
-    description = "dizipal güncel, dizipal yeni ve gerçek adresi. dizipal en yeni dizi ve filmleri güvenli ve hızlı şekilde sunar."
+    description = "Dizipal özellikle ücretli platformların içeriklerini ücretsiz olarak sunmak için tasarlanmıştır."
 
     main_page   = {
         f"{main_url}/kategori/aile/page/"          : "Aile",

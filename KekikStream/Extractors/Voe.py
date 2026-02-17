@@ -8,7 +8,7 @@ class Voe(ExtractorBase):
     name     = "Voe"
     main_url = "https://voe.sx"
 
-    supported_domains = ["voe.sx", "yip.su", "metagnathtuggers.com", "graceaddresscommunity.com", "sethniceletter.com", "maxfinishseveral.com"]
+    supported_domains = ["voe.sx", "yip.su", "metagnathtuggers.com", "graceaddresscommunity.com", "sethniceletter.com", "maxfinishseveral.com", "lauradaydo.com"]
 
     async def extract(self, url: str, referer: str = None) -> ExtractResult:
         try:
@@ -20,6 +20,17 @@ class Voe(ExtractorBase):
             content = resp.text
 
         secici = HTMLHelper(content)
+
+        # JS redirect takibi: window.location.href = 'https://...'
+        js_redirect = secici.regex_first(r"window\.location\.href\s*=\s*'(https?://[^']+)'")
+        if js_redirect and "Redirecting" in content:
+            try:
+                resp    = await self.async_cf_get(js_redirect, headers={"Referer": url})
+                content = resp.text
+            except Exception:
+                resp    = await self.httpx.get(js_redirect, headers={"Referer": url})
+                content = resp.text
+            secici = HTMLHelper(content)
 
         # Method 1: wc0 base64 encoded JSON
         script_val = secici.regex_first(r"wc0\s*=\s*'([^']+)'")

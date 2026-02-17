@@ -13,10 +13,22 @@ class Coflix(PluginBase):
     _api_url    = f"{main_url}/wp-json/apiflix/v1"
 
     main_page   = {
-        "movies"  : "Films",
-        "series"  : "Séries",
-        "doramas" : "Doramas",
-        "animes"  : "Animes",
+        "movies"                             : "Films",
+        "movies&genres=animation"            : "Animation",
+        "movies&genres=aventure"             : "Aventure",
+        "movies&genres=comedie"              : "Comédie",
+        "movies&genres=familial"             : "Familial",
+        "movies&genres=mystere"              : "Mystère",
+        "movies&genres=crimen"               : "Crimen",
+        "movies&genres=action-adventure"     : "Action & Adventure",
+        "movies&genres=documental"           : "Documental",
+        "series"                             : "Séries",
+        "series&genres=drama"                : "Drama",
+        "series&genres=comedia"              : "Comedia",
+        "series&genres=misterio"             : "Misterio",
+        "series&genres=reality"              : "Reality",
+        "doramas"                            : "Doramas",
+        "animes"                             : "Animes",
     }
 
     async def get_main_page(self, page: int, url: str, category: str) -> list[MainPageResult]:

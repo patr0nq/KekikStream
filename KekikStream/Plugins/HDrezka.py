@@ -12,7 +12,17 @@ class HDrezka(PluginBase):
 
     main_page   = {
         f"{main_url}/films/?filter=watching"     : "Фильмы",
+        f"{main_url}/films/action/?filter=watching" : "Боевики",
+        f"{main_url}/films/fiction/?filter=watching" : "Фантастика",
+        f"{main_url}/films/comedy/?filter=watching" : "Комедии",
+        f"{main_url}/films/thriller/?filter=watching" : "Триллеры",
+        f"{main_url}/films/drama/?filter=watching" : "Драмы",
+        f"{main_url}/films/horror/?filter=watching" : "Ужасы",
+        f"{main_url}/films/detective/?filter=watching" : "Детективы",
+        f"{main_url}/films/crime/?filter=watching" : "Криминал",
         f"{main_url}/series/?filter=watching"    : "Сериалы",
+        f"{main_url}/series/comedy/?filter=watching" : "Комедийные сериалы",
+        f"{main_url}/series/drama/?filter=watching" : "Драматические сериалы",
         f"{main_url}/cartoons/?filter=watching"  : "Мультфильмы",
         f"{main_url}/animation/?filter=watching" : "Аниме",
     }

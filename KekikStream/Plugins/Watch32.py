@@ -7,7 +7,7 @@ class Watch32(FlwBasePlugin):
     language    = "en"
     main_url    = "https://watch32.sx"
     favicon     = f"https://www.google.com/s2/favicons?domain={main_url}&sz=64"
-    description = "Watch Your Favorite Movies &amp; TV Shows Online - Streaming For Free. With Movies &amp; TV Shows Full HD. Find Your Movies &amp; Watch NOW!"
+    description = "Watch Your Favorite Movies & TV Shows Online - Streaming For Free. With Movies & TV Shows Full HD. Find Your Movies & Watch NOW!"
 
     main_page = {
         f"{main_url}/movie?page="           : "Popular Movies",

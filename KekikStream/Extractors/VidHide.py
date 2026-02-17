@@ -18,6 +18,7 @@ class VidHide(PackedJSExtractor):
         "smoothpre.com",
         "dhtpre.com",
         "peytonepre.com",
+        "minochinos.com",
     ]
 
     def get_embed_url(self, url: str) -> str:

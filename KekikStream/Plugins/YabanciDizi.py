@@ -8,7 +8,7 @@ class YabanciDizi(PluginBase):
     language    = "tr"
     main_url    = "https://yabancidizi.so"
     favicon     = f"https://www.google.com/s2/favicons?domain={main_url}&sz=64"
-    description = "Yabancidizi.so platformu üzerinden en güncel yabancı dizileri ve filmleri izleyebilir, favori içeriklerinizi takip edebilirsiniz."
+    description = "Son çıkan yabancı dizi ve filmleri yabancidizi' de izle. En yeni yabancı film ve diziler, türkçe altyazılı yada dublaj olarak 1080p kalitesinde hd izle."
 
     main_page = {
         f"{main_url}/kesfet/eyJvcmRlciI6ImRhdGVfYm90dG9tIiwia2F0ZWdvcnkiOlsiMTciXX0=" : "Diziler",
