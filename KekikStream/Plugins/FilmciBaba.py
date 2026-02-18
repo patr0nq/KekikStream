@@ -83,7 +83,7 @@ class FilmciBaba(PluginBase):
         istek  = await self.httpx.get(url)
         secici = HTMLHelper(istek.text)
 
-        title       = secici.select_text("h1")
+        title       = secici.select_text("div.title h1")
         poster      = secici.select_poster(".poster img")
         description = secici.select_text(".excerpt p")
         year        = secici.extract_year(".release", ".movie-info")

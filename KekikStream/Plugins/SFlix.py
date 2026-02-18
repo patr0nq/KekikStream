@@ -5,7 +5,7 @@ from KekikStream.Core.Plugin.FlwBasePlugin import FlwBasePlugin
 class SFlix(FlwBasePlugin):
     name        = "SFlix"
     language    = "en"
-    main_url    = "https://sflix.to"
+    main_url    = "https://sflix.ps"
     favicon     = f"https://www.google.com/s2/favicons?domain={main_url}&sz=64"
     description = "Watch over 400000 HD movies online free and HD Tv Shows, Stream latest tv shows online free."
 
