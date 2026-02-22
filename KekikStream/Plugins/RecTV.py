@@ -69,8 +69,8 @@ class RecTV(PluginBase):
         self.httpx.headers.update({"user-agent": "okhttp/4.12.0"})
         istek     = await self.httpx.get(f"{self.main_url}/api/search/{query}/{self.sw_key}/")
 
-        kanallar  = istek.json().get("channels")
-        icerikler = istek.json().get("posters")
+        kanallar  = istek.json().get("channels") or []
+        icerikler = istek.json().get("posters") or []
         tum_veri  = {item['title']: item for item in kanallar + icerikler}.values()
         tum_veri  = sorted(tum_veri, key=lambda sozluk: sozluk["title"])
 

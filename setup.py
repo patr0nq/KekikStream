@@ -22,7 +22,10 @@ setup(
     ],
 
     # ? Paket Bilgileri
-    packages         = ["KekikStream"],
+    packages         = ["KekikStream", "KekikStream.GUI", "KekikStream.GUI.web"],
+    package_data     = {
+        "KekikStream.GUI": ["web/**/*", "web/*"],
+    },
     python_requires  = ">=3.11",
     install_requires = [
         "setuptools",
@@ -33,13 +36,15 @@ setup(
         "selectolax",
         "pydantic",
         "InquirerPy",
-        "yt-dlp"
+        "yt-dlp",
+        "pywebview"
     ],
 
     # ? Konsoldan Çalıştırılabilir
     entry_points = {
         "console_scripts": [
-            "KekikStream = KekikStream:basla"
+            "KekikStream    = KekikStream:basla",
+            "KekikStreamGUI = KekikStream.GUI:gui_basla"
         ]
     },
 

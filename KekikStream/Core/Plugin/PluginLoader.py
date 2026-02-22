@@ -7,10 +7,11 @@ import os, importlib.util, traceback
 from ..Extractor.ExtractorManager import ExtractorManager
 
 class PluginLoader:
-    def __init__(self, plugins_dir: str, ex_manager: str | ExtractorManager = "Extractors", proxy: str | dict | None = None):
+    def __init__(self, plugins_dir: str, ex_manager: str | ExtractorManager = "Extractors", proxy: str | dict | None = None, shared_scraper=None):
         # Yerel ve global eklenti dizinlerini ayarla
-        self.ex_manager = ex_manager
-        self.proxy      = proxy
+        self.ex_manager     = ex_manager
+        self.proxy          = proxy
+        self.shared_scraper = shared_scraper
         self.local_plugins_dir  = Path(plugins_dir).resolve()
         self.global_plugins_dir = Path(__file__).parent.parent.parent / "Plugins"
 
@@ -70,7 +71,7 @@ class PluginLoader:
                 obj = getattr(module, attr)
                 if isinstance(obj, type) and issubclass(obj, PluginBase) and obj is not PluginBase and obj.__module__ == module_name:
                     # konsol.log(f"[yellow]Yüklenen sınıf\t\t: {module_name}.{obj.__name__} ({obj.__module__}.{obj.__name__})[/yellow]")
-                    return obj(proxy=self.proxy, ex_manager=self.ex_manager)
+                    return obj(proxy=self.proxy, ex_manager=self.ex_manager, shared_scraper=self.shared_scraper)
 
         except Exception as hata:
             konsol.print(f"[red][!] Eklenti yüklenirken hata oluştu: {module_name}\nHata: {hata}")

@@ -6,8 +6,13 @@ from ..Extractor.ExtractorManager import ExtractorManager
 
 class PluginManager:
     def __init__(self, plugin_dir="Plugins", ex_manager: str | ExtractorManager = "Extractors", proxy: str | dict | None = None):
+        from cloudscraper import CloudScraper
+
+        # Tek bir CloudScraper oluştur, tüm plugin'ler bunu paylaşsın
+        shared_scraper = CloudScraper()
+
         # Eklenti yükleyiciyi başlat ve tüm eklentileri yükle
-        self.plugin_loader = PluginLoader(plugin_dir, ex_manager=ex_manager, proxy=proxy)
+        self.plugin_loader = PluginLoader(plugin_dir, ex_manager=ex_manager, proxy=proxy, shared_scraper=shared_scraper)
         self.plugins       = self.plugin_loader.load_all()
 
     def get_plugin_names(self):

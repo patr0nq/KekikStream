@@ -25,11 +25,15 @@ class PluginBase(ABC):
         self.main_page = {url.replace(self.main_url, new_url): category for url, category in self.main_page.items()}
         self.main_url  = new_url
 
-    def __init__(self, proxy: str | dict | None = None, ex_manager: str | ExtractorManager = "Extractors"):
+    def __init__(self, proxy: str | dict | None = None, ex_manager: str | ExtractorManager = "Extractors", shared_scraper=None):
         # cloudscraper - for bypassing Cloudflare
-        self.cloudscraper = CloudScraper()
-        if proxy:
-            self.cloudscraper.proxies = proxy if isinstance(proxy, dict) else {"http": proxy, "https": proxy}
+        # Proxy varsa yeni scraper oluştur, yoksa paylaşılanı kullan
+        if proxy or not shared_scraper:
+            self.cloudscraper = CloudScraper()
+            if proxy:
+                self.cloudscraper.proxies = proxy if isinstance(proxy, dict) else {"http": proxy, "https": proxy}
+        else:
+            self.cloudscraper = shared_scraper
 
         # Convert dict proxy to string for httpx if necessary
         httpx_proxy = proxy

@@ -95,8 +95,9 @@ class MediaHandler:
             if self.title:
                 mpv_command.append(f"--force-media-title={self.title}")
 
-            for key, value in self.headers.items():
-                mpv_command.append(f"--http-header-fields={key}: {value}")
+            if self.headers:
+                header_fields = ",".join([f"{k}: {v}" for k, v in self.headers.items()])
+                mpv_command.append(f"--http-header-fields={header_fields}")
 
             mpv_command.extend(
                 f"--sub-file={subtitle.url}" for subtitle in extract_data.subtitles

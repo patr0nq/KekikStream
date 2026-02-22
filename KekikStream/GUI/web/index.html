@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KekikStream</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: ['class', '[data-theme="dark"]'],
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 50: '#fef2f2', 100: '#fee2e2', 200: '#fecaca', 300: '#fca5a5', 400: '#f87171', 500: '#ef4444', 600: '#dc2626', 700: '#b91c1c', 800: '#991b1b', 900: '#7f1d1d' },
+                        surface: { 50: '#fafafa', 100: '#f5f5f5', 200: '#e5e5e5', 300: '#d4d4d4', 700: '#1a1a2e', 800: '#141425', 900: '#0f0f1a', 950: '#0a0a12' },
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- HLS.js for M3U8 playback -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+    <!-- Plyr.js - Modern Video Player -->
+    <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css">
+    <script src="https://cdn.plyr.io/3.7.8/plyr.polyfilled.js"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body class="font-['Inter'] antialiased">
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="fixed inset-0 z-[9999] flex items-center justify-center bg-surface-950">
+        <div class="text-center">
+            <div class="relative w-20 h-20 mx-auto mb-6">
+                <div class="absolute inset-0 rounded-full border-4 border-surface-700"></div>
+                <div
+                    class="absolute inset-0 rounded-full border-4 border-primary-500 border-t-transparent animate-spin">
+                </div>
+                <div class="absolute inset-2 rounded-full border-4 border-primary-400 border-b-transparent animate-spin"
+                    style="animation-direction:reverse;animation-duration:0.8s"></div>
+            </div>
+            <h2 class="text-2xl font-bold text-white mb-2">KekikStream</h2>
+            <p class="text-surface-300 text-sm" id="loading-text">Eklentiler yükleniyor...</p>
+        </div>
+    </div>
+
+    <!-- App Container -->
+    <div id="app" class="min-h-screen transition-colors duration-300">
+
+        <!-- Top Navbar -->
+        <nav id="navbar" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300">
+            <div class="flex items-center justify-between px-6 py-3">
+                <!-- Logo -->
+                <div class="flex items-center gap-3 cursor-pointer" onclick="App.navigate('home')">
+                    <span class="text-2xl">🎬</span>
+                    <h1
+                        class="text-xl font-bold bg-gradient-to-r from-primary-400 to-primary-600 bg-clip-text text-transparent">
+                        KekikStream
+                    </h1>
+                </div>
+
+                <!-- Search Bar -->
+                <div class="flex-1 max-w-xl mx-8">
+                    <div class="relative group">
+                        <input type="text" id="search-input" placeholder="Film, dizi veya anime ara..."
+                            class="w-full px-5 py-2.5 rounded-full text-sm transition-all duration-300 outline-none
+                                   bg-white/10 border border-white/10 text-white placeholder-white/40
+                                   focus:bg-white/15 focus:border-primary-500/50 focus:ring-2 focus:ring-primary-500/20" onkeydown="if(event.key==='Enter') App.doSearch()">
+                        <button onclick="App.doSearch()"
+                            class="absolute right-1 top-1 bottom-1 px-4 rounded-full bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium transition-all">
+                            🔍
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right Controls -->
+                <div class="flex items-center gap-3">
+                    <button onclick="Theme.toggle()" id="theme-btn"
+                        class="p-2.5 rounded-full hover:bg-white/10 transition-all text-lg" title="Tema Değiştir">
+                        🌙
+                    </button>
+                    <button onclick="App.navigate('settings')"
+                        class="p-2.5 rounded-full hover:bg-white/10 transition-all text-lg" title="Ayarlar">
+                        ⚙️
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main id="main-content" class="pt-16 min-h-screen">
+            <!-- Pages rendered here by router -->
+        </main>
+
+        <!-- Video Player Overlay -->
+        <div id="player-overlay" class="fixed inset-0 z-[100] hidden">
+            <div class="absolute inset-0 bg-black flex flex-col">
+                <!-- Player Header -->
+                <div id="player-header"
+                    class="absolute top-0 left-0 right-0 z-20 p-4 bg-gradient-to-b from-black/90 to-transparent transition-opacity duration-300">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <button onclick="Player.close()"
+                                class="p-2 rounded-full hover:bg-white/20 transition text-white text-xl">✕</button>
+                            <h3 id="player-title" class="text-white font-semibold text-lg"></h3>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="Player.openExternal('mpv')"
+                                class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm transition"
+                                title="MPV ile Aç">
+                                🎥 MPV
+                            </button>
+                            <button onclick="Player.openExternal('vlc')"
+                                class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-sm transition"
+                                title="VLC ile Aç">
+                                📺 VLC
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Plyr Video Player -->
+                <div id="plyr-container" class="flex-1 flex items-center justify-center">
+                    <video id="video-player" playsinline>
+                        Tarayıcınız video oynatmayı desteklemiyor.
+                    </video>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-[200] flex flex-col gap-3"></div>
+
+    <!-- Scripts -->
+    <script src="js/theme.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/player.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>

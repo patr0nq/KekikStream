@@ -13,9 +13,10 @@ class ExtractorBase(ABC):
     name     = "Extractor"
     main_url = ""
 
-    def __init__(self):
+    def __init__(self, shared_scraper=None):
         # cloudscraper - for bypassing Cloudflare
-        self.cloudscraper = CloudScraper()
+        # Paylaşılan bir instance varsa onu kullan (66 extractorda 1 tane yeter)
+        self.cloudscraper = shared_scraper or CloudScraper()
 
         # httpx - lightweight and safe for most HTTP requests
         self.httpx = AsyncClient(timeout = 10)

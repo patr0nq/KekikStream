@@ -118,8 +118,8 @@ class YTDLP(ExtractorBase):
         joined = "|".join(re.escape(d) for d in sorted(domains))
         cls._FAST_DOMAIN_RE = re.compile(rf"(?:^|.*\.)(?:{joined})$", re.IGNORECASE)
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, shared_scraper=None):
+        super().__init__(shared_scraper=shared_scraper)
         self.__class__._init_fast_domain_regex()
 
     def can_handle_url(self, url: str) -> bool:

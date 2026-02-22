@@ -24,12 +24,21 @@ class ExtractorManager:
         if self._initialized:
             return
 
+        from cloudscraper import CloudScraper
+
+        # Tek bir CloudScraper oluştur, tüm extractorlar bunu paylaşsın
+        shared_scraper = CloudScraper()
+
         # Instance listesi oluştur
         self._extractor_instances = []
 
         # TÜM extractorları instance'la
         for extractor_cls in self.extractors:
-            instance = extractor_cls()
+            try:
+                instance = extractor_cls(shared_scraper=shared_scraper)
+            except TypeError:
+                # YTDLP gibi bazı extractorlar shared_scraper kabul etmeyebilir
+                instance = extractor_cls()
 
             # YTDLP'yi ayrı tut
             if instance.name == "yt-dlp":
@@ -37,9 +46,9 @@ class ExtractorManager:
             else:
                 self._extractor_instances.append(instance)
 
-        # YTDLP'yi EN BAŞA ekle
+        # YTDLP'yi EN SONA ekle (fallback — diğer extractorlar önce denensin)
         if self._ytdlp_extractor:
-            self._extractor_instances.insert(0, self._ytdlp_extractor)
+            self._extractor_instances.append(self._ytdlp_extractor)
 
         self._initialized = True
 
