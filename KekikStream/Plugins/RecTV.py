@@ -13,7 +13,7 @@ def _decode_unicode(text: str | None) -> str | None:
 class RecTV(PluginBase):
     name        = "RecTV"
     language    = "tr"
-    main_url    = "https://m.prectv61.lol"
+    main_url    = "https://m.prectv62.lol"
     favicon     = "https://rectvapk.cc/wp-content/uploads/2023/02/Rec-TV.webp"
     description = "RecTv APK, Türkiye’deki en popüler Çevrimiçi Medya Akış platformlarından biridir. Filmlerin, Canlı Sporların, Web Dizilerinin ve çok daha fazlasının keyfini ücretsiz çıkarın."
 
@@ -69,8 +69,8 @@ class RecTV(PluginBase):
         self.httpx.headers.update({"user-agent": "okhttp/4.12.0"})
         istek     = await self.httpx.get(f"{self.main_url}/api/search/{query}/{self.sw_key}/")
 
-        kanallar  = istek.json().get("channels") or []
-        icerikler = istek.json().get("posters") or []
+        kanallar  = istek.json().get("channels")
+        icerikler = istek.json().get("posters")
         tum_veri  = {item['title']: item for item in kanallar + icerikler}.values()
         tum_veri  = sorted(tum_veri, key=lambda sozluk: sozluk["title"])
 
